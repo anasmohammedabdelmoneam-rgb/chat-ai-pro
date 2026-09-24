@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 
 const app = express();
+
 app.use(express.json({ limit: "1mb" }));
 app.use(express.static(__dirname));
 
@@ -26,13 +27,18 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    const contents = messages.map((message) => ({
-      role: message.role === "assistant" ? "model" : "user",
-      parts: [{ text: String(message.content || "") }]
+    const input = messages.map((message) => ({
+      type: message.role === "assistant" ? "model_output" : "user_input",
+      content: [
+        {
+          type: "text",
+          text: String(message.content || "")
+        }
+      ]
     }));
 
     const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/interactions",
       {
         method: "POST",
         headers: {
@@ -40,7 +46,9 @@ app.post("/api/chat", async (req, res) => {
           "x-goog-api-key": API_KEY
         },
         body: JSON.stringify({
-          contents
+          model: "gemini-3.8-flash",
+          input,
+          store: false
         })
       }
     );
@@ -48,6 +56,8 @@ app.post("/api/chat", async (req, res) => {
     const data = await response.json();
 
     if (!response.ok) {
+      console.error("Gemini API Error:", data);
+
       return res.status(response.status).json({
         error:
           data.error?.message ||
@@ -55,18 +65,31 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    const reply =
-      data.candidates?.[0]?.content?.parts
-        ?.map((part) => part.text || "")
-        .join("") || "لم تصل إجابة.";
+    const steps = data.steps || [];
+    const lastStep = steps[steps.length - 1];
 
-    res.json({ reply });
+    let reply = "";
+
+    if (lastStep?.content) {
+      reply = lastStep.content
+        .filter((item) => item.type === "text")
+        .map((item) => item.text)
+        .join("");
+    }
+
+    if (!reply && data.output_text) {
+      reply = data.output_text;
+    }
+
+    res.json({
+      reply: reply || "لم تصل إجابة من Gemini."
+    });
 
   } catch (error) {
-    console.error("Gemini Error:", error);
+    console.error("Server Error:", error);
 
     res.status(500).json({
-      error: "حدث خطأ داخلي في الخادم."
+      error: error.message || "حدث خطأ داخلي في الخادم."
     });
   }
 });
