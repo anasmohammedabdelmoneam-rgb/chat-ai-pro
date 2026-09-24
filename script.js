@@ -50,8 +50,8 @@ async function sendMessage() {
     bubble.textContent = data.reply;
     history.push({ role: "assistant", content: data.reply });
   } catch (err) {
-    bubble.textContent = "تعذر الاتصال بالذكاء الاصطناعي. تأكد أن الـBackend يعمل وأن مفتاح API مضبوط.";
-    console.error(err);
+  console.error("Anas AI Error:", err);
+  bubble.textContent = "حدث خطأ: " + err.message;
   } finally {
     setLoading(false);
     input.focus();
