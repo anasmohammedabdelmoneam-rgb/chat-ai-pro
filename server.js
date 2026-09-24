@@ -24,7 +24,7 @@ app.post("/api/chat", async (req, res) => {
         "Authorization": `Bearer ${API_KEY}`
       },
       body: JSON.stringify({
-        model: model: "gpt-5.6-luna",
+        model: "gpt-5.6-luna",
         input: messages
       })
     });
