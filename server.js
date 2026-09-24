@@ -1,4 +1,3 @@
-```js
 require("dotenv").config();
 const express = require("express");
 
@@ -18,9 +17,10 @@ const MODEL = "gemini-3.8-flash";
 const MAX_RETRIES = 4;
 const INITIAL_DELAY = 1000;
 
-// انتظار مع Exponential Backoff + Jitter
 function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise(function (resolve) {
+    setTimeout(resolve, ms);
+  });
 }
 
 async function callGemini(body) {
@@ -39,17 +39,15 @@ async function callGemini(body) {
 
       const data = await response.json();
 
-      // الطلب نجح
       if (response.ok) {
         return data;
       }
 
       lastError = {
         status: response.status,
-        data
+        data: data
       };
 
-      // أخطاء مؤقتة يمكن إعادة المحاولة عليها
       const shouldRetry =
         response.status === 408 ||
         response.status === 429 ||
@@ -59,17 +57,23 @@ async function callGemini(body) {
         break;
       }
 
-      // 1s → 2s → 4s → 8s + jitter
       const backoff = INITIAL_DELAY * Math.pow(2, attempt);
       const jitter = Math.floor(Math.random() * 500);
+      const waitTime = backoff + jitter;
 
       console.log(
-        `Gemini temporary error ${response.status}. ` +
-        `Retry ${attempt + 1}/${MAX_RETRIES} in ${backoff + jitter}ms`
+        "Gemini temporary error " +
+          response.status +
+          ". Retry " +
+          (attempt + 1) +
+          "/" +
+          MAX_RETRIES +
+          " in " +
+          waitTime +
+          "ms"
       );
 
-      await sleep(backoff + jitter);
-
+      await sleep(waitTime);
     } catch (error) {
       lastError = {
         status: 500,
@@ -86,20 +90,26 @@ async function callGemini(body) {
 
       const backoff = INITIAL_DELAY * Math.pow(2, attempt);
       const jitter = Math.floor(Math.random() * 500);
+      const waitTime = backoff + jitter;
 
       console.log(
-        `Network error. Retry ${attempt + 1}/${MAX_RETRIES} ` +
-        `in ${backoff + jitter}ms`
+        "Network error. Retry " +
+          (attempt + 1) +
+          "/" +
+          MAX_RETRIES +
+          " in " +
+          waitTime +
+          "ms"
       );
 
-      await sleep(backoff + jitter);
+      await sleep(waitTime);
     }
   }
 
   throw lastError;
 }
 
-app.post("/api/chat", async (req, res) => {
+app.post("/api/chat", async function (req, res) {
   try {
     if (!API_KEY) {
       return res.status(500).json({
@@ -117,38 +127,41 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    // تحويل سجل المحادثة إلى صيغة Gemini
-    const input = messages.map((message) => ({
-      type:
-        message.role === "assistant"
-          ? "model_output"
-          : "user_input",
-      content: [
-        {
-          type: "text",
-          text: String(message.content || "")
-        }
-      ]
-    }));
+    const input = messages.map(function (message) {
+      return {
+        type:
+          message.role === "assistant"
+            ? "model_output"
+            : "user_input",
+        content: [
+          {
+            type: "text",
+            text: String(message.content || "")
+          }
+        ]
+      };
+    });
 
     const data = await callGemini({
       model: MODEL,
-      input,
+      input: input,
       store: false
     });
 
-    // Interactions API يعيد output_text عند توفر النص
     let reply = data.output_text || "";
 
-    // احتياط إذا لم يوجد output_text
     if (!reply && Array.isArray(data.steps)) {
       for (let i = data.steps.length - 1; i >= 0; i--) {
         const step = data.steps[i];
 
         if (Array.isArray(step.content)) {
           const textParts = step.content
-            .filter((part) => part.type === "text")
-            .map((part) => part.text || "");
+            .filter(function (part) {
+              return part.type === "text";
+            })
+            .map(function (part) {
+              return part.text || "";
+            });
 
           if (textParts.length) {
             reply = textParts.join("");
@@ -163,18 +176,20 @@ app.post("/api/chat", async (req, res) => {
     }
 
     res.json({
-      reply
+      reply: reply
     });
-
   } catch (error) {
     console.error("Gemini Error:", error);
 
     const message =
-      error?.data?.error?.message ||
-      error?.message ||
+      (error &&
+        error.data &&
+        error.data.error &&
+        error.data.error.message) ||
+      (error && error.message) ||
       "حدث خطأ غير معروف.";
 
-    const status = error?.status || 500;
+    const status = (error && error.status) || 500;
 
     res.status(status).json({
       error: message
@@ -182,7 +197,6 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Anas AI running on port ${PORT}`);
+app.listen(PORT, function () {
+  console.log("Anas AI running on port " + PORT);
 });
-```
