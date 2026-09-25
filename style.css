@@ -1,6 +1,6 @@
 /* =========================================================
    CHAT AI PRO
-   CHATGPT STYLE HISTORY
+   FULL STYLE
 ========================================================= */
 
 * {
@@ -11,7 +11,6 @@ html,
 body {
   width: 100%;
   height: 100%;
-
   margin: 0;
   padding: 0;
 }
@@ -32,7 +31,6 @@ body {
     );
 
   color: #ffffff;
-
   overflow: hidden;
 }
 
@@ -70,7 +68,7 @@ body {
   flex-direction: column;
 
   background:
-    rgba(8, 12, 24, 0.96);
+    rgba(8, 12, 24, 0.97);
 
   border-left:
     1px solid
@@ -96,18 +94,16 @@ body {
 
 
 /* =========================================================
-   NEW CHAT
+   NEW CHAT BUTTON
 ========================================================= */
 
 .new-chat-btn {
   width: 100%;
-
   min-height: 48px;
 
   display: flex;
 
   align-items: center;
-
   justify-content: center;
 
   gap: 10px;
@@ -124,13 +120,11 @@ body {
   color: #ffffff;
 
   font-family: inherit;
-
   font-size: 14px;
 
   cursor: pointer;
 
-  transition:
-    0.2s ease;
+  transition: 0.2s ease;
 }
 
 .new-chat-btn:hover {
@@ -163,7 +157,6 @@ body {
     );
 
   font-size: 19px;
-
   line-height: 1;
 }
 
@@ -177,15 +170,9 @@ body {
     18px 18px 10px;
 
   color:
-    rgba(
-      255,
-      255,
-      255,
-      0.48
-    );
+    rgba(255, 255, 255, 0.48);
 
   font-size: 12px;
-
   font-weight: 700;
 }
 
@@ -236,12 +223,7 @@ body {
   text-align: center;
 
   color:
-    rgba(
-      255,
-      255,
-      255,
-      0.32
-    );
+    rgba(255, 255, 255, 0.32);
 
   font-size: 13px;
 
@@ -257,7 +239,6 @@ body {
   position: relative;
 
   width: 100%;
-
   min-height: 48px;
 
   display: flex;
@@ -274,12 +255,7 @@ body {
   border-radius: 11px;
 
   color:
-    rgba(
-      255,
-      255,
-      255,
-      0.78
-    );
+    rgba(255, 255, 255, 0.78);
 
   cursor: pointer;
 
@@ -289,22 +265,12 @@ body {
 
 .conversation-item:hover {
   background:
-    rgba(
-      255,
-      255,
-      255,
-      0.07
-    );
+    rgba(255, 255, 255, 0.07);
 }
 
 .conversation-item.active {
   background:
-    rgba(
-      65,
-      83,
-      170,
-      0.3
-    );
+    rgba(65, 83, 170, 0.3);
 
   color: #ffffff;
 }
@@ -347,12 +313,7 @@ body {
   font-size: 10px;
 
   color:
-    rgba(
-      255,
-      255,
-      255,
-      0.32
-    );
+    rgba(255, 255, 255, 0.32);
 }
 
 
@@ -384,12 +345,7 @@ body {
   background: transparent;
 
   color:
-    rgba(
-      255,
-      255,
-      255,
-      0.48
-    );
+    rgba(255, 255, 255, 0.48);
 
   font-size: 13px;
 
@@ -397,8 +353,7 @@ body {
 
   opacity: 0;
 
-  transition:
-    0.18s ease;
+  transition: 0.18s ease;
 }
 
 .conversation-item:hover
@@ -408,12 +363,7 @@ body {
 
 .conversation-action:hover {
   background:
-    rgba(
-      255,
-      255,
-      255,
-      0.09
-    );
+    rgba(255, 255, 255, 0.09);
 
   color: #ffffff;
 }
@@ -433,24 +383,14 @@ body {
 
   border-top:
     1px solid
-    rgba(
-      255,
-      255,
-      255,
-      0.06
-    );
+    rgba(255, 255, 255, 0.06);
 }
 
 .storage-note {
   text-align: center;
 
   color:
-    rgba(
-      255,
-      255,
-      255,
-      0.28
-    );
+    rgba(255, 255, 255, 0.28);
 
   font-size: 10px;
 }
@@ -495,21 +435,11 @@ body {
   direction: rtl;
 
   background:
-    rgba(
-      8,
-      11,
-      20,
-      0.82
-    );
+    rgba(8, 11, 20, 0.82);
 
   border-bottom:
     1px solid
-    rgba(
-      255,
-      255,
-      255,
-      0.08
-    );
+    rgba(255, 255, 255, 0.08);
 
   backdrop-filter:
     blur(18px);
@@ -549,22 +479,12 @@ body {
 
   border:
     1px solid
-    rgba(
-      255,
-      255,
-      255,
-      0.1
-    );
+    rgba(255, 255, 255, 0.1);
 
   border-radius: 12px;
 
   background:
-    rgba(
-      255,
-      255,
-      255,
-      0.05
-    );
+    rgba(255, 255, 255, 0.05);
 
   color: #ffffff;
 
@@ -614,12 +534,7 @@ body {
 
   box-shadow:
     0 8px 30px
-    rgba(
-      59,
-      92,
-      255,
-      0.28
-    );
+    rgba(59, 92, 255, 0.28);
 }
 
 .brand .logo img {
@@ -654,36 +569,21 @@ body {
   font-size: 13px;
 
   color:
-    rgba(
-      255,
-      255,
-      255,
-      0.55
-    );
+    rgba(255, 255, 255, 0.55);
 }
 
 
 /* =========================================================
-   NEW CHAT TOP BUTTON
+   TOP NEW CHAT
 ========================================================= */
 
 .ghost {
   border:
     1px solid
-    rgba(
-      255,
-      255,
-      255,
-      0.13
-    );
+    rgba(255, 255, 255, 0.13);
 
   background:
-    rgba(
-      255,
-      255,
-      255,
-      0.05
-    );
+    rgba(255, 255, 255, 0.05);
 
   color: #ffffff;
 
@@ -698,26 +598,15 @@ body {
 
   cursor: pointer;
 
-  transition:
-    0.2s ease;
+  transition: 0.2s ease;
 }
 
 .ghost:hover {
   background:
-    rgba(
-      255,
-      255,
-      255,
-      0.1
-    );
+    rgba(255, 255, 255, 0.1);
 
   border-color:
-    rgba(
-      255,
-      255,
-      255,
-      0.22
-    );
+    rgba(255, 255, 255, 0.22);
 }
 
 
@@ -743,12 +632,7 @@ body {
   scrollbar-width: thin;
 
   scrollbar-color:
-    rgba(
-      255,
-      255,
-      255,
-      0.22
-    )
+    rgba(255, 255, 255, 0.22)
     transparent;
 }
 
@@ -762,12 +646,7 @@ body {
 
 .chat::-webkit-scrollbar-thumb {
   background:
-    rgba(
-      255,
-      255,
-      255,
-      0.2
-    );
+    rgba(255, 255, 255, 0.2);
 
   border-radius: 20px;
 }
@@ -809,7 +688,6 @@ body {
   display: flex !important;
 
   align-items: center;
-
   justify-content: center;
 
   background: transparent !important;
@@ -821,9 +699,15 @@ body {
   width: 100% !important;
   height: 100% !important;
 
+  max-width: 100% !important;
+  max-height: 100% !important;
+
   object-fit: cover !important;
 
   display: block !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .welcome h2 {
@@ -841,12 +725,7 @@ body {
   font-size: 15px;
 
   color:
-    rgba(
-      255,
-      255,
-      255,
-      0.55
-    );
+    rgba(255, 255, 255, 0.55);
 }
 
 
@@ -896,12 +775,7 @@ body {
 
   box-shadow:
     0 8px 25px
-    rgba(
-      47,
-      77,
-      220,
-      0.2
-    );
+    rgba(47, 77, 220, 0.2);
 
   overflow-wrap:
     anywhere;
@@ -925,29 +799,14 @@ body {
     20px 20px 20px 5px;
 
   background:
-    rgba(
-      255,
-      255,
-      255,
-      0.055
-    );
+    rgba(255, 255, 255, 0.055);
 
   border:
     1px solid
-    rgba(
-      255,
-      255,
-      255,
-      0.08
-    );
+    rgba(255, 255, 255, 0.08);
 
   color:
-    rgba(
-      255,
-      255,
-      255,
-      0.92
-    );
+    rgba(255, 255, 255, 0.92);
 
   font-size: 15px;
 
@@ -955,12 +814,7 @@ body {
 
   box-shadow:
     0 8px 30px
-    rgba(
-      0,
-      0,
-      0,
-      0.15
-    );
+    rgba(0, 0, 0, 0.15);
 
   overflow-wrap:
     anywhere;
@@ -1021,12 +875,7 @@ body {
   border-radius: 7px;
 
   background:
-    rgba(
-      0,
-      0,
-      0,
-      0.35
-    );
+    rgba(0, 0, 0, 0.35);
 
   color:
     #dbe5ff;
@@ -1046,21 +895,11 @@ body {
   border-radius: 12px;
 
   background:
-    rgba(
-      0,
-      0,
-      0,
-      0.42
-    );
+    rgba(0, 0, 0, 0.42);
 
   border:
     1px solid
-    rgba(
-      255,
-      255,
-      255,
-      0.08
-    );
+    rgba(255, 255, 255, 0.08);
 
   overflow-x: auto;
 
@@ -1087,13 +926,11 @@ body {
   display: flex;
 
   align-items: center;
-
   justify-content: center;
 
   gap: 6px;
 
   min-width: 65px;
-
   min-height: 48px;
 }
 
@@ -1104,12 +941,7 @@ body {
   border-radius: 50%;
 
   background:
-    rgba(
-      255,
-      255,
-      255,
-      0.7
-    );
+    rgba(255, 255, 255, 0.7);
 
   animation:
     typing 1.2s infinite;
@@ -1147,13 +979,16 @@ body {
 
 /* =========================================================
    COMPOSER
+   IMPORTANT:
+   280px reserved for sidebar
 ========================================================= */
 
 .composer-wrap {
   position: fixed;
 
   left: 0;
-  right: 0;
+
+  right: 280px;
 
   bottom: 0;
 
@@ -1163,18 +998,8 @@ body {
   background:
     linear-gradient(
       to top,
-      rgba(
-        5,
-        7,
-        13,
-        0.98
-      ),
-      rgba(
-        5,
-        7,
-        13,
-        0.82
-      ),
+      rgba(5, 7, 13, 0.98),
+      rgba(5, 7, 13, 0.82),
       transparent
     );
 
@@ -1185,12 +1010,14 @@ body {
   direction: rtl;
 }
 
+
+/* =========================================================
+   COMPOSER
+========================================================= */
+
 .composer {
   width:
-    min(
-      100%,
-      1250px
-    );
+    min(100%, 1250px);
 
   margin:
     0 auto;
@@ -1206,30 +1033,15 @@ body {
   border-radius: 20px;
 
   background:
-    rgba(
-      18,
-      23,
-      38,
-      0.94
-    );
+    rgba(18, 23, 38, 0.94);
 
   border:
     1px solid
-    rgba(
-      255,
-      255,
-      255,
-      0.12
-    );
+    rgba(255, 255, 255, 0.12);
 
   box-shadow:
     0 15px 45px
-    rgba(
-      0,
-      0,
-      0,
-      0.35
-    );
+    rgba(0, 0, 0, 0.35);
 
   backdrop-filter:
     blur(18px);
@@ -1276,17 +1088,12 @@ body {
 
 #message::placeholder {
   color:
-    rgba(
-      255,
-      255,
-      255,
-      0.42
-    );
+    rgba(255, 255, 255, 0.42);
 }
 
 
 /* =========================================================
-   SEND
+   SEND BUTTON
 ========================================================= */
 
 .send {
@@ -1302,7 +1109,6 @@ body {
   display: flex;
 
   align-items: center;
-
   justify-content: center;
 
   background:
@@ -1318,17 +1124,11 @@ body {
 
   cursor: pointer;
 
-  transition:
-    0.18s ease;
+  transition: 0.18s ease;
 
   box-shadow:
     0 8px 22px
-    rgba(
-      67,
-      71,
-      245,
-      0.3
-    );
+    rgba(67, 71, 245, 0.3);
 }
 
 .send:hover {
@@ -1337,12 +1137,7 @@ body {
 
   box-shadow:
     0 11px 28px
-    rgba(
-      67,
-      71,
-      245,
-      0.42
-    );
+    rgba(67, 71, 245, 0.42);
 }
 
 .send:disabled {
@@ -1360,10 +1155,7 @@ body {
   display: block;
 
   width:
-    min(
-      100%,
-      1250px
-    );
+    min(100%, 1250px);
 
   margin:
     6px auto 0;
@@ -1371,12 +1163,7 @@ body {
   text-align: center;
 
   color:
-    rgba(
-      255,
-      255,
-      255,
-      0.38
-    );
+    rgba(255, 255, 255, 0.38);
 
   font-size: 11px;
 }
@@ -1394,12 +1181,7 @@ body {
   inset: 0;
 
   background:
-    rgba(
-      0,
-      0,
-      0,
-      0.55
-    );
+    rgba(0, 0, 0, 0.55);
 
   z-index: 90;
 }
@@ -1425,12 +1207,7 @@ body {
 
     box-shadow:
       -15px 0 50px
-      rgba(
-        0,
-        0,
-        0,
-        0.45
-      );
+      rgba(0, 0, 0, 0.45);
   }
 
   .sidebar.open {
@@ -1445,6 +1222,9 @@ body {
   .menu-btn {
     display: flex;
   }
+
+
+  /* TOPBAR */
 
   .topbar {
     height: 76px;
@@ -1478,10 +1258,16 @@ body {
     display: none;
   }
 
+
+  /* CHAT */
+
   .chat {
     padding:
       25px 14px 125px;
   }
+
+
+  /* MESSAGES */
 
   .user-message .bubble,
   .ai-message .bubble {
@@ -1490,7 +1276,20 @@ body {
     font-size: 14px;
   }
 
+
+  /* COMPOSER */
+
   .composer-wrap {
+
+    /*
+       On mobile there is no
+       permanent sidebar.
+    */
+
+    left: 0;
+
+    right: 0;
+
     padding:
       8px 10px 10px;
   }
@@ -1508,6 +1307,9 @@ body {
     border-radius: 14px;
   }
 
+
+  /* WELCOME */
+
   .welcome h2 {
     font-size: 21px;
   }
@@ -1520,6 +1322,9 @@ body {
     width: 75px !important;
     height: 75px !important;
   }
+
+
+  /* ACTION BUTTONS */
 
   .conversation-action {
     opacity: 1;
