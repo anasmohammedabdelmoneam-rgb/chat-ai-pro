@@ -1,6 +1,5 @@
 /* =========================================================
-   CHAT AI PRO
-   MAIN STYLE
+   CHAT AI PRO - STYLE.CSS
 ========================================================= */
 
 * {
@@ -22,6 +21,8 @@ body {
     Tahoma,
     sans-serif;
 
+  color: #ffffff;
+
   background:
     radial-gradient(
       circle at top right,
@@ -29,8 +30,6 @@ body {
       #0b0f1b 45%,
       #05070d 100%
     );
-
-  color: #ffffff;
 
   overflow: hidden;
 }
@@ -68,16 +67,16 @@ body {
 
   padding: 0 28px;
 
-  border-bottom: 1px solid
-    rgba(255, 255, 255, 0.08);
+  direction: rtl;
 
   background:
     rgba(8, 11, 20, 0.82);
 
+  border-bottom: 1px solid
+    rgba(255, 255, 255, 0.08);
+
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-
-  direction: rtl;
 }
 
 /* =========================================================
@@ -87,43 +86,62 @@ body {
 .brand {
   display: flex;
   align-items: center;
+
   gap: 14px;
+
+  direction: rtl;
 }
+
+/* =========================================================
+   APP ICON
+========================================================= */
 
 .brand .logo {
   width: 58px;
   height: 58px;
 
-  border-radius: 19px;
+  flex-shrink: 0;
+
+  border-radius: 18px;
+
+  overflow: hidden;
+
+  padding: 0;
 
   display: flex;
   align-items: center;
   justify-content: center;
 
-  font-size: 22px;
-  font-weight: 800;
-
-  color: white;
-
-  background:
-    linear-gradient(
-      135deg,
-      #2563eb,
-      #6d3df5
-    );
+  background: transparent;
 
   box-shadow:
     0 8px 30px
-    rgba(59, 92, 255, 0.35);
+    rgba(59, 92, 255, 0.28);
+}
+
+.brand .logo img {
+  width: 100%;
+  height: 100%;
+
+  max-width: 100%;
+  max-height: 100%;
+
+  object-fit: cover;
+
+  display: block;
+
+  margin: 0;
+  padding: 0;
 }
 
 .brand h1 {
   margin: 0;
 
   font-size: 22px;
+
   font-weight: 800;
 
-  color: white;
+  color: #ffffff;
 }
 
 .brand span {
@@ -133,12 +151,8 @@ body {
 
   font-size: 13px;
 
-  color: rgba(
-    255,
-    255,
-    255,
-    0.55
-  );
+  color:
+    rgba(255, 255, 255, 0.55);
 }
 
 /* =========================================================
@@ -152,11 +166,13 @@ body {
   background:
     rgba(255, 255, 255, 0.05);
 
-  color: white;
+  color: #ffffff;
 
   padding: 12px 18px;
 
   border-radius: 14px;
+
+  font-family: inherit;
 
   font-size: 14px;
 
@@ -164,8 +180,6 @@ body {
 
   transition:
     0.2s ease;
-
-  direction: rtl;
 }
 
 .ghost:hover {
@@ -174,10 +188,18 @@ body {
 
   border-color:
     rgba(255, 255, 255, 0.22);
+
+  transform:
+    translateY(-1px);
+}
+
+.ghost:active {
+  transform:
+    translateY(0);
 }
 
 /* =========================================================
-   CHAT AREA
+   CHAT
 ========================================================= */
 
 .chat {
@@ -188,19 +210,21 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
 
-  padding: 35px 28px 130px;
+  padding:
+    35px 28px 135px;
 
   scroll-behavior: smooth;
 
   direction: rtl;
 
   scrollbar-width: thin;
+
   scrollbar-color:
     rgba(255, 255, 255, 0.22)
     transparent;
 }
 
-/* Chrome scrollbar */
+/* Chrome / Edge scrollbar */
 
 .chat::-webkit-scrollbar {
   width: 7px;
@@ -219,7 +243,7 @@ body {
 
 .chat::-webkit-scrollbar-thumb:hover {
   background:
-    rgba(255, 255, 255, 0.3);
+    rgba(255, 255, 255, 0.32);
 }
 
 /* =========================================================
@@ -230,9 +254,11 @@ body {
   min-height: 100%;
 
   display: flex;
+
   flex-direction: column;
 
   align-items: center;
+
   justify-content: center;
 
   text-align: center;
@@ -244,7 +270,8 @@ body {
   width: 90px !important;
   height: 90px !important;
 
-  margin: 0 auto 20px !important;
+  margin:
+    0 auto 20px !important;
 
   padding: 0 !important;
 
@@ -278,11 +305,12 @@ body {
 }
 
 .welcome h2 {
-  margin: 0 0 10px;
+  margin:
+    0 0 10px;
 
   font-size: 26px;
 
-  color: white;
+  color: #ffffff;
 }
 
 .welcome p {
@@ -303,7 +331,7 @@ body {
 
   display: flex;
 
-  margin: 0 0 18px;
+  margin-bottom: 18px;
 
   direction: rtl;
 }
@@ -317,12 +345,11 @@ body {
 }
 
 .user-message .bubble {
-  max-width: min(
-    75%,
-    760px
-  );
+  max-width:
+    min(75%, 760px);
 
-  padding: 13px 17px;
+  padding:
+    13px 17px;
 
   border-radius:
     20px 20px 5px 20px;
@@ -334,7 +361,7 @@ body {
       #5542e9
     );
 
-  color: white;
+  color: #ffffff;
 
   font-size: 15px;
 
@@ -358,12 +385,11 @@ body {
 }
 
 .ai-message .bubble {
-  max-width: min(
-    78%,
-    820px
-  );
+  max-width:
+    min(78%, 820px);
 
-  padding: 16px 19px;
+  padding:
+    16px 19px;
 
   border-radius:
     20px 20px 20px 5px;
@@ -376,7 +402,8 @@ body {
       0.055
     );
 
-  border: 1px solid
+  border:
+    1px solid
     rgba(
       255,
       255,
@@ -410,7 +437,8 @@ body {
 ========================================================= */
 
 .ai-bubble p {
-  margin: 0 0 10px;
+  margin:
+    0 0 10px;
 }
 
 .ai-bubble p:last-child {
@@ -418,7 +446,8 @@ body {
 }
 
 .ai-bubble strong {
-  color: white;
+  color: #ffffff;
+
   font-weight: 800;
 }
 
@@ -434,9 +463,10 @@ body {
 .ai-bubble h3,
 .ai-bubble h4 {
   margin-top: 12px;
+
   margin-bottom: 8px;
 
-  color: white;
+  color: #ffffff;
 
   line-height: 1.4;
 }
@@ -459,20 +489,24 @@ body {
 
 .ai-bubble ul,
 .ai-bubble ol {
-  margin: 8px 0;
+  margin:
+    8px 0;
+
   padding-right: 24px;
 }
 
 .ai-bubble li {
-  margin: 5px 0;
+  margin:
+    5px 0;
 }
 
 /* =========================================================
-   CODE
+   INLINE CODE
 ========================================================= */
 
 .ai-bubble code {
-  padding: 3px 7px;
+  padding:
+    3px 7px;
 
   border-radius: 7px;
 
@@ -492,8 +526,13 @@ body {
   unicode-bidi: plaintext;
 }
 
+/* =========================================================
+   CODE BLOCK
+========================================================= */
+
 .ai-bubble .code-block {
-  margin: 12px 0;
+  margin:
+    12px 0;
 
   padding: 14px;
 
@@ -502,7 +541,8 @@ body {
   background:
     rgba(0, 0, 0, 0.42);
 
-  border: 1px solid
+  border:
+    1px solid
     rgba(255, 255, 255, 0.08);
 
   overflow-x: auto;
@@ -521,7 +561,8 @@ body {
 
   background: transparent;
 
-  color: #e8edff;
+  color:
+    #e8edff;
 
   font-size: 13px;
 }
@@ -536,25 +577,29 @@ body {
 
   text-decoration: none;
 
-  border-bottom: 1px solid
+  border-bottom:
+    1px solid
     rgba(117, 167, 255, 0.3);
 }
 
 .ai-bubble a:hover {
-  color: #9abfff;
+  color:
+    #9abfff;
 }
 
 /* =========================================================
-   HR
+   HORIZONTAL LINE
 ========================================================= */
 
 .ai-bubble hr {
   border: 0;
 
-  border-top: 1px solid
+  border-top:
+    1px solid
     rgba(255, 255, 255, 0.1);
 
-  margin: 14px 0;
+  margin:
+    14px 0;
 }
 
 /* =========================================================
@@ -569,6 +614,8 @@ body {
   display: flex;
 
   align-items: center;
+
+  justify-content: center;
 
   gap: 6px;
 
@@ -596,11 +643,13 @@ body {
 }
 
 .typing-dot:nth-child(2) {
-  animation-delay: 0.15s;
+  animation-delay:
+    0.15s;
 }
 
 .typing-dot:nth-child(3) {
-  animation-delay: 0.3s;
+  animation-delay:
+    0.3s;
 }
 
 @keyframes typing {
@@ -608,17 +657,21 @@ body {
   60%,
   100% {
     opacity: 0.3;
-    transform: translateY(0);
+
+    transform:
+      translateY(0);
   }
 
   30% {
     opacity: 1;
-    transform: translateY(-4px);
+
+    transform:
+      translateY(-4px);
   }
 }
 
 /* =========================================================
-   COMPOSER
+   COMPOSER WRAPPER
 ========================================================= */
 
 .composer-wrap {
@@ -626,6 +679,7 @@ body {
 
   left: 0;
   right: 0;
+
   bottom: 0;
 
   padding:
@@ -646,13 +700,16 @@ body {
   direction: rtl;
 }
 
-.composer {
-  width: min(
-    100%,
-    1250px
-  );
+/* =========================================================
+   COMPOSER
+========================================================= */
 
-  margin: 0 auto;
+.composer {
+  width:
+    min(100%, 1250px);
+
+  margin:
+    0 auto;
 
   display: flex;
 
@@ -672,7 +729,8 @@ body {
       0.94
     );
 
-  border: 1px solid
+  border:
+    1px solid
     rgba(
       255,
       255,
@@ -684,8 +742,11 @@ body {
     0 15px 45px
     rgba(0, 0, 0, 0.35);
 
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter:
+    blur(18px);
+
+  -webkit-backdrop-filter:
+    blur(18px);
 
   pointer-events: auto;
 }
@@ -704,17 +765,17 @@ body {
   resize: none;
 
   border: none;
+
   outline: none;
 
   background: transparent;
 
-  color: white;
+  color: #ffffff;
 
   padding:
     12px 10px;
 
-  font-family:
-    inherit;
+  font-family: inherit;
 
   font-size: 15px;
 
@@ -777,7 +838,7 @@ body {
       #7140f5
     );
 
-  color: white;
+  color: #ffffff;
 
   font-size: 23px;
 
@@ -806,7 +867,7 @@ body {
     0 11px 28px
     rgba(
       67,
-      71,
+      71px,
       245,
       0.42
     );
@@ -822,18 +883,17 @@ body {
 }
 
 /* =========================================================
-   FOOTER TEXT
+   FOOTER NOTE
 ========================================================= */
 
 .composer-wrap small {
   display: block;
 
-  width: min(
-    100%,
-    1250px
-  );
+  width:
+    min(100%, 1250px);
 
-  margin: 6px auto 0;
+  margin:
+    6px auto 0;
 
   text-align: center;
 
@@ -858,9 +918,11 @@ body {
 
   .topbar {
     height: 76px;
+
     min-height: 76px;
 
-    padding: 0 14px;
+    padding:
+      0 14px;
   }
 
   .brand {
@@ -872,8 +934,6 @@ body {
     height: 46px;
 
     border-radius: 15px;
-
-    font-size: 18px;
   }
 
   .brand h1 {
@@ -885,7 +945,8 @@ body {
   }
 
   .ghost {
-    padding: 9px 12px;
+    padding:
+      9px 12px;
 
     font-size: 12px;
   }
@@ -925,6 +986,50 @@ body {
   }
 
   .welcome p {
+    font-size: 13px;
+  }
+
+  .welcome-icon {
+    width: 75px !important;
+    height: 75px !important;
+  }
+}
+
+/* =========================================================
+   VERY SMALL SCREENS
+========================================================= */
+
+@media (max-width: 420px) {
+
+  .brand h1 {
+    font-size: 16px;
+  }
+
+  .brand span {
+    display: none;
+  }
+
+  .brand .logo {
+    width: 42px;
+    height: 42px;
+
+    border-radius: 13px;
+  }
+
+  .ghost {
+    font-size: 11px;
+
+    padding:
+      8px 10px;
+  }
+
+  .user-message .bubble,
+  .ai-message .bubble {
+    max-width: 92%;
+
+    padding:
+      11px 13px;
+
     font-size: 13px;
   }
 }
