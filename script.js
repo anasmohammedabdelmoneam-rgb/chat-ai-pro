@@ -1,18 +1,24 @@
+/* =========================================================
+   CHAT AI PRO - SCRIPT
+========================================================= */
+
 const chat = document.getElementById("chat");
-const input = document.getElementById("message");
+const messageInput = document.getElementById("message");
 const sendBtn = document.getElementById("sendBtn");
 const clearBtn = document.getElementById("clearBtn");
 
+/* =========================================================
+   CHAT HISTORY
+========================================================= */
+
 let history = [];
 
-/*
-==================================================
- تحويل Markdown إلى HTML
-==================================================
-*/
+/* =========================================================
+   ESCAPE HTML
+========================================================= */
 
 function escapeHTML(text) {
-  return text
+  return String(text)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -20,61 +26,53 @@ function escapeHTML(text) {
     .replace(/'/g, "&#039;");
 }
 
+/* =========================================================
+   MARKDOWN TO HTML
+========================================================= */
+
 function markdownToHTML(text) {
-  if (!text) return "";
+  if (!text) {
+    return "";
+  }
 
-  let html = escapeHTML(String(text));
+  let html = escapeHTML(text);
 
-  /*
-  الروابط
-  */
+  /* -----------------------------------------
+     CODE BLOCKS
+  ----------------------------------------- */
 
   html = html.replace(
-    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
+    /```([\s\S]*?)```/g,
+    function (_, code) {
+      return (
+        '<pre class="code-block"><code>' +
+        code.trim() +
+        "</code></pre>"
+      );
+    }
   );
 
-  /*
-  روابط مكتوبة مباشرة
-  */
+  /* -----------------------------------------
+     INLINE CODE
+  ----------------------------------------- */
 
   html = html.replace(
-    /(^|[\s>])(https?:\/\/[^\s<]+)/g,
-    '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>'
-  );
-
-  /*
-  كود داخل السطر
-  */
-
-  html = html.replace(
-    /`([^`]+)`/g,
+    /`([^`\n]+)`/g,
     "<code>$1</code>"
   );
 
-  /*
-  نص عريض:
-  **النص**
-  */
+  /* -----------------------------------------
+     LINKS
+  ----------------------------------------- */
 
   html = html.replace(
-    /\*\*(.+?)\*\*/gs,
-    "<strong>$1</strong>"
+    /(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
   );
 
-  /*
-  نص مائل:
-  *النص*
-  */
-
-  html = html.replace(
-    /(^|[^\*])\*([^*\n]+)\*(?!\*)/g,
-    "$1<em>$2</em>"
-  );
-
-  /*
-  العناوين
-  */
+  /* -----------------------------------------
+     HEADINGS
+  ----------------------------------------- */
 
   html = html.replace(
     /^### (.+)$/gm,
@@ -91,359 +89,491 @@ function markdownToHTML(text) {
     "<h2>$1</h2>"
   );
 
-  /*
-  القوائم المرقمة
-  */
+  /* -----------------------------------------
+     BOLD
+  ----------------------------------------- */
 
   html = html.replace(
-    /^(?:\d+\.\s+.+(?:\n|$))+/gm,
-    function (block) {
-      const items = block
-        .trim()
-        .split("\n")
-        .map(function (line) {
-          return line.replace(
-            /^\d+\.\s+/,
-            ""
-          );
-        })
-        .filter(Boolean);
+    /\*\*(.+?)\*\*/g,
+    "<strong>$1</strong>"
+  );
 
-      return (
-        "<ol>" +
-        items
-          .map(function (item) {
-            return "<li>" + item + "</li>";
-          })
-          .join("") +
-        "</ol>"
-      );
+  /* -----------------------------------------
+     ITALIC
+  ----------------------------------------- */
+
+  html = html.replace(
+    /(^|[^\*])\*([^*\n]+)\*/g,
+    "$1<em>$2</em>"
+  );
+
+  /* -----------------------------------------
+     UNORDERED LISTS
+  ----------------------------------------- */
+
+  html = html.replace(
+    /^(?:[-*]) (.+)$/gm,
+    "<li>$1</li>"
+  );
+
+  html = html.replace(
+    /(<li>.*<\/li>\n?)+/g,
+    function (match) {
+      return "<ul>" + match + "</ul>";
     }
   );
 
-  /*
-  القوائم بنقاط
-  */
+  /* -----------------------------------------
+     ORDERED LISTS
+  ----------------------------------------- */
 
   html = html.replace(
-    /^(?:[-•]\s+.+(?:\n|$))+/gm,
-    function (block) {
-      const items = block
-        .trim()
-        .split("\n")
-        .map(function (line) {
-          return line.replace(
-            /^[-•]\s+/,
-            ""
-          );
-        })
-        .filter(Boolean);
-
-      return (
-        "<ul>" +
-        items
-          .map(function (item) {
-            return "<li>" + item + "</li>";
-          })
-          .join("") +
-        "</ul>"
-      );
-    }
+    /^(?:\d+)\. (.+)$/gm,
+    "<li>$1</li>"
   );
 
-  /*
-  الخط الفاصل
-  */
+  /* -----------------------------------------
+     HORIZONTAL LINE
+  ----------------------------------------- */
 
   html = html.replace(
     /^---$/gm,
     "<hr>"
   );
 
-  /*
-  أسطر جديدة
-  */
+  /* -----------------------------------------
+     NEW LINES
+  ----------------------------------------- */
 
   html = html.replace(
     /\n/g,
     "<br>"
   );
 
-  /*
-  إزالة <br> الزائدة حول القوائم
-  */
+  /* -----------------------------------------
+     FIX BLOCK ELEMENT BR TAGS
+  ----------------------------------------- */
 
   html = html.replace(
-    /<br>\s*<(ol|ul|h2|h3|h4|hr)/g,
-    "<$1"
+    /<\/h2><br>/g,
+    "</h2>"
   );
 
   html = html.replace(
-    /(<\/ol>|<\/ul>|<\/h2>|<\/h3>|<\/h4>|<hr>)\s*<br>/g,
-    "$1"
+    /<\/h3><br>/g,
+    "</h3>"
+  );
+
+  html = html.replace(
+    /<\/h4><br>/g,
+    "</h4>"
+  );
+
+  html = html.replace(
+    /<\/pre><br>/g,
+    "</pre>"
+  );
+
+  html = html.replace(
+    /<\/ul><br>/g,
+    "</ul>"
+  );
+
+  html = html.replace(
+    /<hr><br>/g,
+    "<hr>"
   );
 
   return html;
 }
 
-/*
-==================================================
- إضافة رسالة
-==================================================
-*/
+/* =========================================================
+   REMOVE WELCOME SCREEN
+========================================================= */
 
-function addMessage(text, role) {
-  const row = document.createElement("div");
-
-  row.className = `msg ${role}`;
-
-  const bubble = document.createElement("div");
-
-  bubble.className = "bubble";
-
-  if (role === "ai") {
-    bubble.innerHTML = markdownToHTML(text);
-  } else {
-    bubble.textContent = text;
-  }
-
-  row.appendChild(bubble);
-
-  chat.appendChild(row);
-
-  chat.scrollTop = chat.scrollHeight;
-
-  return bubble;
-}
-
-/*
-==================================================
- حالة التحميل
-==================================================
-*/
-
-function setLoading(on) {
-  sendBtn.disabled = on;
-  input.disabled = on;
-
-  if (on) {
-    sendBtn.style.opacity = "0.6";
-    sendBtn.style.cursor = "not-allowed";
-  } else {
-    sendBtn.style.opacity = "";
-    sendBtn.style.cursor = "";
-  }
-}
-
-/*
-==================================================
- إرسال الرسالة
-==================================================
-*/
-
-async function sendMessage() {
-  const text = input.value.trim();
-
-  if (!text || sendBtn.disabled) {
-    return;
-  }
-
-  /*
-  إزالة رسالة الترحيب
-  */
-
+function removeWelcome() {
   const welcome =
-    chat.querySelector(".welcome");
+    document.querySelector(".welcome");
 
   if (welcome) {
     welcome.remove();
   }
+}
 
-  /*
-  عرض رسالة المستخدم
-  */
+/* =========================================================
+   ADD USER MESSAGE
+========================================================= */
 
-  addMessage(text, "user");
+function addUserMessage(text) {
+  removeWelcome();
 
+  const message =
+    document.createElement("div");
+
+  message.className =
+    "message user-message";
+
+  message.innerHTML = `
+    <div class="bubble">
+      ${escapeHTML(text)}
+    </div>
+  `;
+
+  chat.appendChild(message);
+
+  scrollToBottom();
+}
+
+/* =========================================================
+   ADD AI MESSAGE
+========================================================= */
+
+function addAIMessage(text) {
+  removeWelcome();
+
+  const message =
+    document.createElement("div");
+
+  message.className =
+    "message ai-message";
+
+  message.innerHTML = `
+    <div class="bubble ai-bubble">
+      ${markdownToHTML(text)}
+    </div>
+  `;
+
+  chat.appendChild(message);
+
+  scrollToBottom();
+
+  return message;
+}
+
+/* =========================================================
+   ADD LOADING MESSAGE
+========================================================= */
+
+function addLoadingMessage() {
+  removeWelcome();
+
+  const message =
+    document.createElement("div");
+
+  message.className =
+    "message ai-message loading-message";
+
+  message.innerHTML = `
+    <div class="bubble ai-bubble loading-bubble">
+      <span class="typing-dot"></span>
+      <span class="typing-dot"></span>
+      <span class="typing-dot"></span>
+    </div>
+  `;
+
+  chat.appendChild(message);
+
+  scrollToBottom();
+
+  return message;
+}
+
+/* =========================================================
+   REMOVE LOADING
+========================================================= */
+
+function removeLoadingMessage(message) {
+  if (
+    message &&
+    message.parentNode
+  ) {
+    message.remove();
+  }
+}
+
+/* =========================================================
+   SCROLL
+========================================================= */
+
+function scrollToBottom() {
+  requestAnimationFrame(() => {
+    chat.scrollTop =
+      chat.scrollHeight;
+  });
+}
+
+/* =========================================================
+   SET BUTTON STATE
+========================================================= */
+
+function setSendingState(sending) {
+  sendBtn.disabled = sending;
+  messageInput.disabled = sending;
+
+  if (sending) {
+    sendBtn.style.opacity = "0.6";
+    sendBtn.style.cursor = "wait";
+  } else {
+    sendBtn.style.opacity = "";
+    sendBtn.style.cursor = "";
+    messageInput.disabled = false;
+  }
+}
+
+/* =========================================================
+   SEND MESSAGE
+========================================================= */
+
+async function sendMessage() {
+  const text =
+    messageInput.value.trim();
+
+  if (!text) {
+    return;
+  }
+
+  /* منع الإرسال المكرر */
+  if (sendBtn.disabled) {
+    return;
+  }
+
+  /* عرض رسالة المستخدم */
+  addUserMessage(text);
+
+  /* حفظ الرسالة */
   history.push({
     role: "user",
-    content: text
+    content: text,
   });
 
-  /*
-  تنظيف مربع الكتابة
-  */
+  /* تنظيف مربع الكتابة */
+  messageInput.value = "";
 
-  input.value = "";
+  autoResizeTextarea();
 
-  input.style.height = "auto";
+  /* حالة التحميل */
+  setSendingState(true);
 
-  setLoading(true);
-
-  /*
-  رسالة انتظار
-  */
-
-  const bubble =
-    addMessage(
-      "يكتب الآن…",
-      "ai"
-    );
+  const loadingMessage =
+    addLoadingMessage();
 
   try {
-
     const response =
-      await fetch(
-        "/api/chat",
-        {
-          method: "POST",
+      await fetch("/api/chat", {
+        method: "POST",
 
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
 
-          body: JSON.stringify({
-            messages: history
-          })
-        }
+        body: JSON.stringify({
+          messages: history,
+        }),
+      });
+
+    /* محاولة قراءة JSON */
+    const data =
+      await response.json().catch(
+        () => ({})
       );
 
-    const data =
-      await response.json();
-
+    /* إذا كان السيرفر أعاد خطأ */
     if (!response.ok) {
       throw new Error(
-        data.error ||
-        "حدث خطأ في الخادم."
+        data?.error ||
+          `HTTP ${response.status}`
       );
     }
 
     /*
-    عرض إجابة الذكاء الاصطناعي
-    بعد تحويل Markdown
+      السيرفر الحالي يرجع:
+      {
+        answer: "..."
+      }
+
+      ونضع reply كاحتياط
+      لو كانت نسخة قديمة من السيرفر.
     */
 
-    bubble.innerHTML =
-      markdownToHTML(
-        data.reply || ""
+    const answer =
+      typeof data?.answer === "string"
+        ? data.answer
+        : typeof data?.reply === "string"
+        ? data.reply
+        : "";
+
+    /* حذف رسالة التحميل */
+    removeLoadingMessage(
+      loadingMessage
+    );
+
+    /* التأكد من وجود إجابة */
+    if (!answer.trim()) {
+      throw new Error(
+        "السيرفر أعاد إجابة فارغة."
       );
+    }
+
+    /* عرض الإجابة */
+    const aiMessage =
+      addAIMessage(answer);
 
     /*
-    حفظ الإجابة في المحادثة
+      حفظ إجابة المساعد
+      داخل المحادثة
     */
 
     history.push({
       role: "assistant",
-      content: data.reply
+      content: answer,
     });
 
-    /*
-    التمرير للأسفل
-    */
-
-    chat.scrollTop =
-      chat.scrollHeight;
-
-  } catch (err) {
-
+    return aiMessage;
+  } catch (error) {
     console.error(
-      "Anas AI Error:",
-      err
+      "Chat error:",
+      error
     );
 
-    bubble.textContent =
-      "حدث خطأ: " +
-      err.message;
+    /* إزالة التحميل */
+    removeLoadingMessage(
+      loadingMessage
+    );
 
+    /* عرض رسالة الخطأ */
+    addAIMessage(
+      "حدث خطأ: تعذر الحصول على إجابة حاليًا. حاول مرة أخرى بعد قليل."
+    );
   } finally {
+    setSendingState(false);
 
-    setLoading(false);
+    messageInput.focus();
 
-    input.focus();
+    scrollToBottom();
   }
 }
 
-/*
-==================================================
- زر الإرسال
-==================================================
-*/
+/* =========================================================
+   CLEAR CHAT
+========================================================= */
 
-sendBtn.addEventListener(
-  "click",
-  sendMessage
-);
+function clearChat() {
+  history = [];
 
-/*
-==================================================
- Enter لإرسال الرسالة
- Shift + Enter = سطر جديد
-==================================================
-*/
+  chat.innerHTML = `
+    <section class="welcome">
 
-input.addEventListener(
+      <div class="welcome-icon">
+        <img
+          src="icon.png"
+          alt="Chat AI Pro"
+        >
+      </div>
+
+      <h2>
+        مرحبًا بك في Chat AI Pro
+      </h2>
+
+      <p>
+        اكتب سؤالك وسأحاول مساعدتك.
+      </p>
+
+    </section>
+  `;
+
+  messageInput.value = "";
+
+  autoResizeTextarea();
+
+  messageInput.focus();
+}
+
+/* =========================================================
+   TEXTAREA AUTO RESIZE
+========================================================= */
+
+function autoResizeTextarea() {
+  messageInput.style.height =
+    "auto";
+
+  const maxHeight = 150;
+
+  messageInput.style.height =
+    Math.min(
+      messageInput.scrollHeight,
+      maxHeight
+    ) + "px";
+}
+
+/* =========================================================
+   ENTER KEY
+========================================================= */
+
+messageInput.addEventListener(
   "keydown",
-  function (e) {
+  function (event) {
+    /*
+      Enter = إرسال
+      Shift + Enter = سطر جديد
+    */
 
     if (
-      e.key === "Enter" &&
-      !e.shiftKey
+      event.key === "Enter" &&
+      !event.shiftKey
     ) {
-
-      e.preventDefault();
+      event.preventDefault();
 
       sendMessage();
     }
   }
 );
 
-/*
-==================================================
- تكبير مربع الكتابة تلقائيًا
-==================================================
-*/
+/* =========================================================
+   INPUT
+========================================================= */
 
-input.addEventListener(
+messageInput.addEventListener(
   "input",
   function () {
-
-    input.style.height =
-      "auto";
-
-    input.style.height =
-      Math.min(
-        input.scrollHeight,
-        140
-      ) + "px";
+    autoResizeTextarea();
   }
 );
 
-/*
-==================================================
- زر مسح المحادثة
-==================================================
-*/
+/* =========================================================
+   SEND BUTTON
+========================================================= */
+
+sendBtn.addEventListener(
+  "click",
+  function () {
+    sendMessage();
+  }
+);
+
+/* =========================================================
+   CLEAR BUTTON
+========================================================= */
 
 clearBtn.addEventListener(
   "click",
   function () {
-
-    history = [];
-
-    chat.innerHTML = `
-      <section class="welcome">
-        <div class="welcome-icon">✦</div>
-        <h2>مرحبًا بك في Anas AI</h2>
-        <p>اكتب سؤالك وسأحاول مساعدتك.</p>
-      </section>
-    `;
-
-    input.value = "";
-
-    input.style.height =
-      "auto";
-
-    input.focus();
+    clearChat();
   }
+);
+
+/* =========================================================
+   INITIAL STATE
+========================================================= */
+
+autoResizeTextarea();
+
+messageInput.focus();
+
+/* =========================================================
+   CONSOLE
+========================================================= */
+
+console.log(
+  "Chat AI Pro loaded successfully."
 );
