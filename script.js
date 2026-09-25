@@ -1,28 +1,73 @@
 /* =========================================================
-   CHAT AI PRO - SCRIPT.JS
+   CHAT AI PRO
+   Authentication + OTP + Chat + History
 ========================================================= */
 
 
 /* =========================================================
-   ELEMENTS
+   AUTH ELEMENTS
+========================================================= */
+
+const authScreen = document.getElementById("authScreen");
+const app = document.getElementById("app");
+
+const phoneStep = document.getElementById("phoneStep");
+const otpStep = document.getElementById("otpStep");
+
+const phoneInput = document.getElementById("phoneInput");
+const otpInput = document.getElementById("otpInput");
+
+const sendOtpBtn = document.getElementById("sendOtpBtn");
+const verifyOtpBtn = document.getElementById("verifyOtpBtn");
+const resendOtpBtn = document.getElementById("resendOtpBtn");
+const backToPhoneBtn = document.getElementById("backToPhoneBtn");
+
+const phoneError = document.getElementById("phoneError");
+const otpError = document.getElementById("otpError");
+
+const sentPhone = document.getElementById("sentPhone");
+
+const authLoading = document.getElementById("authLoading");
+
+const logoutBtn = document.getElementById("logoutBtn");
+const userPhone = document.getElementById("userPhone");
+
+
+/* =========================================================
+   CHAT ELEMENTS
 ========================================================= */
 
 const chat = document.getElementById("chat");
+const welcome = document.getElementById("welcome");
+
 const messageInput = document.getElementById("message");
 const sendBtn = document.getElementById("sendBtn");
 
 const clearBtn = document.getElementById("clearBtn");
+const newChatBtn = document.getElementById("newChatBtn");
 
-const sidebar = document.querySelector(".sidebar");
-const sidebarOverlay = document.querySelector(".sidebar-overlay");
 const conversationList =
-  document.querySelector(".conversation-list");
-
-const newChatBtn =
-  document.querySelector(".new-chat-btn");
+    document.getElementById("conversationList");
 
 const menuBtn =
-  document.querySelector(".menu-btn");
+    document.getElementById("menuBtn");
+
+const sidebar =
+    document.querySelector(".sidebar");
+
+const sidebarOverlay =
+    document.getElementById("sidebarOverlay");
+
+
+/* =========================================================
+   STORAGE
+========================================================= */
+
+const CONVERSATIONS_KEY =
+    "chat_ai_pro_conversations";
+
+const AUTH_KEY =
+    "chat_ai_pro_auth";
 
 
 /* =========================================================
@@ -35,514 +80,1261 @@ let currentConversationId = null;
 
 let isSending = false;
 
+let pendingPhone = "";
+
 
 /* =========================================================
-   LOCAL STORAGE
+   BASIC HELPERS
 ========================================================= */
 
-const STORAGE_KEY =
-  "chat_ai_pro_conversations";
+function createId() {
 
+    return (
+        Date.now().toString(36) +
+        Math.random().toString(36).substring(2, 9)
+    );
+
+}
+
+
+function getDate() {
+
+    return new Date().toLocaleString(
+        "ar-SA",
+        {
+            dateStyle: "short",
+            timeStyle: "short"
+        }
+    );
+
+}
+
+
+/* =========================================================
+   PHONE
+========================================================= */
+
+function normalizeSaudiPhone(value) {
+
+    let phone = String(value || "")
+        .replace(/\s+/g, "")
+        .replace(/-/g, "");
+
+    if (phone.startsWith("+966")) {
+
+        phone = phone.substring(4);
+
+    } else if (phone.startsWith("00966")) {
+
+        phone = phone.substring(5);
+
+    } else if (phone.startsWith("966")) {
+
+        phone = phone.substring(3);
+
+    } else if (phone.startsWith("05")) {
+
+        phone = phone.substring(1);
+
+    }
+
+    return phone;
+
+}
+
+
+function isValidSaudiPhone(phone) {
+
+    return /^5\d{8}$/.test(phone);
+
+}
+
+
+function fullSaudiPhone(phone) {
+
+    return "+966" + phone;
+
+}
+
+
+/* =========================================================
+   AUTH UI
+========================================================= */
+
+function showLoading(show, text = "جارٍ التحقق...") {
+
+    if (!authLoading) return;
+
+    const span =
+        authLoading.querySelector("span");
+
+    if (span) {
+        span.textContent = text;
+    }
+
+    authLoading.classList.toggle(
+        "hidden",
+        !show
+    );
+
+}
+
+
+function setAuthButtonsDisabled(disabled) {
+
+    if (sendOtpBtn) {
+        sendOtpBtn.disabled = disabled;
+    }
+
+    if (verifyOtpBtn) {
+        verifyOtpBtn.disabled = disabled;
+    }
+
+    if (resendOtpBtn) {
+        resendOtpBtn.disabled = disabled;
+    }
+
+}
+
+
+function showPhoneStep() {
+
+    phoneStep.classList.remove("hidden");
+
+    otpStep.classList.add("hidden");
+
+    phoneError.textContent = "";
+
+    otpError.textContent = "";
+
+    showLoading(false);
+
+}
+
+
+function showOtpStep(phone) {
+
+    phoneStep.classList.add("hidden");
+
+    otpStep.classList.remove("hidden");
+
+    phoneError.textContent = "";
+
+    otpError.textContent = "";
+
+    sentPhone.textContent =
+        fullSaudiPhone(phone);
+
+    otpInput.value = "";
+
+    otpInput.focus();
+
+    showLoading(false);
+
+}
+
+
+/* =========================================================
+   AUTH STORAGE
+========================================================= */
+
+function saveAuth(phone) {
+
+    localStorage.setItem(
+        AUTH_KEY,
+        JSON.stringify({
+            authenticated: true,
+            phone: phone,
+            loginAt: Date.now()
+        })
+    );
+
+}
+
+
+function getAuth() {
+
+    try {
+
+        const data =
+            localStorage.getItem(AUTH_KEY);
+
+        if (!data) {
+            return null;
+        }
+
+        return JSON.parse(data);
+
+    } catch {
+
+        return null;
+
+    }
+
+}
+
+
+function clearAuth() {
+
+    localStorage.removeItem(AUTH_KEY);
+
+}
+
+
+/* =========================================================
+   SHOW APP
+========================================================= */
+
+function enterApp(phone) {
+
+    saveAuth(phone);
+
+    authScreen.classList.add("hidden");
+
+    app.classList.remove("hidden");
+
+    userPhone.textContent =
+        fullSaudiPhone(phone);
+
+    loadConversations();
+
+    if (!currentConversationId) {
+        createNewConversation();
+    }
+
+}
+
+
+function logout() {
+
+    clearAuth();
+
+    conversations = [];
+
+    currentConversationId = null;
+
+    authScreen.classList.remove("hidden");
+
+    app.classList.add("hidden");
+
+    phoneInput.value = "";
+
+    otpInput.value = "";
+
+    pendingPhone = "";
+
+    showPhoneStep();
+
+}
+
+
+/* =========================================================
+   SEND OTP
+========================================================= */
+
+async function sendOtp() {
+
+    phoneError.textContent = "";
+
+    const phone =
+        normalizeSaudiPhone(
+            phoneInput.value
+        );
+
+    if (!isValidSaudiPhone(phone)) {
+
+        phoneError.textContent =
+            "أدخل رقم جوال سعودي صحيح مثل 5XXXXXXXX.";
+
+        return;
+
+    }
+
+    pendingPhone = phone;
+
+    setAuthButtonsDisabled(true);
+
+    showLoading(
+        true,
+        "جارٍ إرسال رمز التحقق..."
+    );
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/auth/send-otp",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        method: "sms",
+                        phone: fullSaudiPhone(phone)
+                    })
+                }
+            );
+
+        let data = {};
+
+        try {
+            data = await response.json();
+        } catch {
+            data = {};
+        }
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.error ||
+                data.message ||
+                "تعذر إرسال رمز التحقق."
+            );
+
+        }
+
+        /*
+         * Authentica may return different success
+         * structures depending on the API response.
+         * The HTTP success response is enough here.
+         */
+
+        showOtpStep(phone);
+
+    } catch (error) {
+
+        console.error(
+            "Send OTP error:",
+            error
+        );
+
+        phoneError.textContent =
+            error.message ||
+            "حدث خطأ أثناء إرسال الرمز.";
+
+        showLoading(false);
+
+    } finally {
+
+        setAuthButtonsDisabled(false);
+
+    }
+
+}
+
+
+/* =========================================================
+   VERIFY OTP
+========================================================= */
+
+async function verifyOtp() {
+
+    otpError.textContent = "";
+
+    const otp =
+        String(
+            otpInput.value || ""
+        ).replace(/\D/g, "");
+
+    if (!pendingPhone) {
+
+        otpError.textContent =
+            "أعد إدخال رقم الجوال.";
+
+        showPhoneStep();
+
+        return;
+
+    }
+
+    if (!/^\d{4,8}$/.test(otp)) {
+
+        otpError.textContent =
+            "أدخل رمز التحقق الصحيح.";
+
+        return;
+
+    }
+
+    setAuthButtonsDisabled(true);
+
+    showLoading(
+        true,
+        "جارٍ التحقق من الرمز..."
+    );
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/auth/verify-otp",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        phone:
+                            fullSaudiPhone(
+                                pendingPhone
+                            ),
+
+                        otp: otp
+                    })
+                }
+            );
+
+        let data = {};
+
+        try {
+            data = await response.json();
+        } catch {
+            data = {};
+        }
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.error ||
+                data.message ||
+                "رمز التحقق غير صحيح."
+            );
+
+        }
+
+        /*
+         * Some API responses use different fields
+         * for successful verification.
+         *
+         * If the backend returned HTTP 200,
+         * we treat the verification as successful.
+         */
+
+        enterApp(pendingPhone);
+
+        showLoading(false);
+
+    } catch (error) {
+
+        console.error(
+            "Verify OTP error:",
+            error
+        );
+
+        otpError.textContent =
+            error.message ||
+            "تعذر التحقق من الرمز.";
+
+        showLoading(false);
+
+    } finally {
+
+        setAuthButtonsDisabled(false);
+
+    }
+
+}
+
+
+/* =========================================================
+   RESEND OTP
+========================================================= */
+
+async function resendOtp() {
+
+    if (!pendingPhone) {
+
+        showPhoneStep();
+
+        return;
+
+    }
+
+    phoneInput.value =
+        pendingPhone;
+
+    await sendOtp();
+
+}
+
+
+/* =========================================================
+   CONVERSATIONS
+========================================================= */
 
 function saveConversations() {
 
-  try {
+    try {
 
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(conversations)
-    );
+        localStorage.setItem(
+            CONVERSATIONS_KEY,
+            JSON.stringify(conversations)
+        );
 
-  } catch (error) {
+    } catch (error) {
 
-    console.error(
-      "تعذر حفظ المحادثات:",
-      error
-    );
+        console.error(
+            "Save conversations error:",
+            error
+        );
 
-  }
+    }
 
 }
 
 
 function loadConversations() {
 
-  try {
+    try {
 
-    const saved =
-      localStorage.getItem(STORAGE_KEY);
+        const data =
+            localStorage.getItem(
+                CONVERSATIONS_KEY
+            );
 
-    if (!saved) {
-      conversations = [];
-      return;
+        conversations =
+            data
+                ? JSON.parse(data)
+                : [];
+
+        if (!Array.isArray(conversations)) {
+            conversations = [];
+        }
+
+    } catch {
+
+        conversations = [];
+
     }
 
-    const parsed =
-      JSON.parse(saved);
+    renderConversationList();
 
-    if (Array.isArray(parsed)) {
+}
 
-      conversations = parsed;
 
-    } else {
+function createNewConversation() {
 
-      conversations = [];
+    const conversation = {
 
-    }
+        id: createId(),
 
-  } catch (error) {
+        title: "محادثة جديدة",
 
-    console.error(
-      "تعذر تحميل المحادثات:",
-      error
+        createdAt: Date.now(),
+
+        updatedAt: Date.now(),
+
+        messages: []
+
+    };
+
+    conversations.unshift(
+        conversation
     );
 
-    conversations = [];
+    currentConversationId =
+        conversation.id;
 
-  }
+    saveConversations();
+
+    renderConversationList();
+
+    renderCurrentConversation();
+
+    closeSidebar();
+
+}
+
+
+function getCurrentConversation() {
+
+    return conversations.find(
+        conversation =>
+            conversation.id ===
+            currentConversationId
+    );
 
 }
 
 
 /* =========================================================
-   ID
+   CONVERSATION TITLE
 ========================================================= */
 
-function createId() {
+function generateTitle(text) {
 
-  return (
-    Date.now().toString(36) +
-    Math.random()
-      .toString(36)
-      .substring(2, 9)
-  );
+    const clean =
+        String(text || "")
+            .replace(/\s+/g, " ")
+            .trim();
 
-}
-
-
-/* =========================================================
-   DATE
-========================================================= */
-
-function formatDate(timestamp) {
-
-  const date =
-    new Date(timestamp);
-
-  return date.toLocaleDateString(
-    "ar-SA",
-    {
-      day: "numeric",
-      month: "short"
+    if (!clean) {
+        return "محادثة جديدة";
     }
-  );
+
+    if (clean.length <= 30) {
+        return clean;
+    }
+
+    return clean.substring(0, 30) + "...";
 
 }
 
 
 /* =========================================================
-   ESCAPE HTML
+   RENDER HISTORY
+========================================================= */
+
+function renderConversationList() {
+
+    if (!conversationList) return;
+
+    conversationList.innerHTML = "";
+
+    if (conversations.length === 0) {
+
+        conversationList.innerHTML =
+            `
+            <div class="empty-history">
+                لا توجد محادثات حتى الآن.
+                <br>
+                ابدأ محادثة جديدة.
+            </div>
+            `;
+
+        return;
+
+    }
+
+    conversations.forEach(
+        conversation => {
+
+            const item =
+                document.createElement("div");
+
+            item.className =
+                "conversation-item";
+
+            if (
+                conversation.id ===
+                currentConversationId
+            ) {
+
+                item.classList.add(
+                    "active"
+                );
+
+            }
+
+            const main =
+                document.createElement("div");
+
+            main.className =
+                "conversation-main";
+
+            const title =
+                document.createElement("div");
+
+            title.className =
+                "conversation-title";
+
+            title.textContent =
+                conversation.title ||
+                "محادثة جديدة";
+
+            const date =
+                document.createElement("div");
+
+            date.className =
+                "conversation-date";
+
+            date.textContent =
+                conversation.updatedAt
+                    ? new Date(
+                        conversation.updatedAt
+                    ).toLocaleDateString(
+                        "ar-SA"
+                    )
+                    : "";
+
+            main.appendChild(title);
+            main.appendChild(date);
+
+
+            const actions =
+                document.createElement("div");
+
+            actions.className =
+                "conversation-actions";
+
+
+            const rename =
+                document.createElement("button");
+
+            rename.type = "button";
+
+            rename.title =
+                "إعادة تسمية";
+
+            rename.textContent = "✎";
+
+            rename.addEventListener(
+                "click",
+                event => {
+
+                    event.stopPropagation();
+
+                    renameConversation(
+                        conversation.id
+                    );
+
+                }
+            );
+
+
+            const deleteBtn =
+                document.createElement("button");
+
+            deleteBtn.type = "button";
+
+            deleteBtn.title =
+                "حذف";
+
+            deleteBtn.textContent = "×";
+
+            deleteBtn.addEventListener(
+                "click",
+                event => {
+
+                    event.stopPropagation();
+
+                    deleteConversation(
+                        conversation.id
+                    );
+
+                }
+            );
+
+
+            actions.appendChild(rename);
+            actions.appendChild(deleteBtn);
+
+
+            item.appendChild(main);
+            item.appendChild(actions);
+
+
+            item.addEventListener(
+                "click",
+                () => {
+
+                    currentConversationId =
+                        conversation.id;
+
+                    saveConversations();
+
+                    renderConversationList();
+
+                    renderCurrentConversation();
+
+                    closeSidebar();
+
+                }
+            );
+
+
+            conversationList.appendChild(item);
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   RENAME
+========================================================= */
+
+function renameConversation(id) {
+
+    const conversation =
+        conversations.find(
+            item =>
+                item.id === id
+        );
+
+    if (!conversation) return;
+
+    const newTitle =
+        window.prompt(
+            "اكتب اسم المحادثة:",
+            conversation.title
+        );
+
+    if (
+        newTitle === null ||
+        !newTitle.trim()
+    ) {
+        return;
+    }
+
+    conversation.title =
+        newTitle.trim();
+
+    conversation.updatedAt =
+        Date.now();
+
+    saveConversations();
+
+    renderConversationList();
+
+}
+
+
+/* =========================================================
+   DELETE
+========================================================= */
+
+function deleteConversation(id) {
+
+    const conversation =
+        conversations.find(
+            item =>
+                item.id === id
+        );
+
+    if (!conversation) return;
+
+    const confirmed =
+        window.confirm(
+            "هل تريد حذف هذه المحادثة؟"
+        );
+
+    if (!confirmed) return;
+
+    conversations =
+        conversations.filter(
+            item =>
+                item.id !== id
+        );
+
+    if (
+        currentConversationId === id
+    ) {
+
+        currentConversationId =
+            null;
+
+        if (conversations.length > 0) {
+
+            currentConversationId =
+                conversations[0].id;
+
+        } else {
+
+            createNewConversation();
+
+            return;
+
+        }
+
+    }
+
+    saveConversations();
+
+    renderConversationList();
+
+    renderCurrentConversation();
+
+}
+
+
+/* =========================================================
+   MARKDOWN
 ========================================================= */
 
 function escapeHTML(value) {
 
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 
 }
 
-
-/* =========================================================
-   MARKDOWN TO HTML
-   - Fixes <br>
-   - Supports bold
-   - Supports lists
-   - Supports headings
-   - Supports code
-========================================================= */
 
 function markdownToHTML(text) {
 
-  if (!text) {
-    return "";
-  }
+    text = String(text ?? "");
+
+    /*
+     * Fix literal <br> returned by some AI providers.
+     */
+
+    text = text
+        .replace(
+            /<br\s*\/?>/gi,
+            "\n"
+        )
+        .replace(
+            /<\/br>/gi,
+            "\n"
+        );
 
 
-  /*
-    الذكاء الاصطناعي أحيانًا يرسل
-    <br> أو <br/>
-    لذلك نحولها إلى سطر جديد أولًا.
-  */
+    const codeBlocks = [];
 
-  text = String(text)
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/br>/gi, "\n");
+    text = text.replace(
+        /```([\s\S]*?)```/g,
+        function(_, code) {
 
+            const index =
+                codeBlocks.length;
 
-  /*
-    نحمي النص من HTML الحقيقي
-  */
+            codeBlocks.push(
+                escapeHTML(
+                    code
+                        .replace(
+                            /^\w+\n/,
+                            ""
+                        )
+                        .trim()
+                )
+            );
 
-  let html =
-    escapeHTML(text);
+            return `@@CODEBLOCK${index}@@`;
 
-
-  /* =======================================================
-     CODE BLOCKS
-  ======================================================= */
-
-  html = html.replace(
-    /```([\s\S]*?)```/g,
-    function (_, code) {
-
-      return (
-        '<pre class="code-block"><code>' +
-        code.trim() +
-        "</code></pre>"
-      );
-
-    }
-  );
+        }
+    );
 
 
-  /* =======================================================
-     INLINE CODE
-  ======================================================= */
-
-  html = html.replace(
-    /`([^`\n]+)`/g,
-    "<code>$1</code>"
-  );
+    text =
+        escapeHTML(text);
 
 
-  /* =======================================================
-     LINKS
-  ======================================================= */
-
-  html = html.replace(
-    /(https?:\/\/[^\s<]+)/g,
-    function (_, url) {
-
-      return (
-        '<a href="' +
-        url +
-        '" target="_blank" rel="noopener noreferrer">' +
-        url +
-        "</a>"
-      );
-
-    }
-  );
+    text =
+        text.replace(
+            /`([^`]+)`/g,
+            "<code>$1</code>"
+        );
 
 
-  /* =======================================================
-     HEADINGS
-  ======================================================= */
-
-  html = html.replace(
-    /^### (.+)$/gm,
-    "<h4>$1</h4>"
-  );
-
-  html = html.replace(
-    /^## (.+)$/gm,
-    "<h3>$1</h3>"
-  );
-
-  html = html.replace(
-    /^# (.+)$/gm,
-    "<h2>$1</h2>"
-  );
+    text =
+        text.replace(
+            /^### (.*)$/gm,
+            "<h3>$1</h3>"
+        );
 
 
-  /* =======================================================
-     BOLD
-  ======================================================= */
-
-  html = html.replace(
-    /\*\*(.+?)\*\*/g,
-    "<strong>$1</strong>"
-  );
+    text =
+        text.replace(
+            /^## (.*)$/gm,
+            "<h2>$1</h2>"
+        );
 
 
-  /* =======================================================
-     ITALIC
-  ======================================================= */
-
-  html = html.replace(
-    /(^|[^\*])\*([^*\n]+)\*/g,
-    "$1<em>$2</em>"
-  );
+    text =
+        text.replace(
+            /^# (.*)$/gm,
+            "<h1>$1</h1>"
+        );
 
 
-  /* =======================================================
-     BULLET LIST
-  ======================================================= */
-
-  html = html.replace(
-    /^(?:[-*]) (.+)$/gm,
-    "<li>$1</li>"
-  );
+    text =
+        text.replace(
+            /\*\*(.*?)\*\*/g,
+            "<strong>$1</strong>"
+        );
 
 
-  html = html.replace(
-    /(<li>.*<\/li>\n?)+/g,
-    function (match) {
-
-      return (
-        "<ul>" +
-        match +
-        "</ul>"
-      );
-
-    }
-  );
+    text =
+        text.replace(
+            /__(.*?)__/g,
+            "<strong>$1</strong>"
+        );
 
 
-  /* =======================================================
-     NUMBERED LIST
-  ======================================================= */
-
-  html = html.replace(
-    /^(?:\d+)\. (.+)$/gm,
-    "<li>$1</li>"
-  );
+    text =
+        text.replace(
+            /\*([^*\n]+)\*/g,
+            "<em>$1</em>"
+        );
 
 
-  /* =======================================================
-     HORIZONTAL LINE
-  ======================================================= */
-
-  html = html.replace(
-    /^---$/gm,
-    "<hr>"
-  );
+    text =
+        text.replace(
+            /_([^_\n]+)_/g,
+            "<em>$1</em>"
+        );
 
 
-  /* =======================================================
-     NEW LINES
-  ======================================================= */
-
-  html = html.replace(
-    /\n/g,
-    "<br>"
-  );
+    text =
+        text.replace(
+            /^[-*] (.*)$/gm,
+            "<li>$1</li>"
+        );
 
 
-  /* =======================================================
-     REMOVE UNNECESSARY BR AFTER BLOCK ELEMENTS
-  ======================================================= */
-
-  html = html.replace(
-    /<\/h2><br>/g,
-    "</h2>"
-  );
-
-  html = html.replace(
-    /<\/h3><br>/g,
-    "</h3>"
-  );
-
-  html = html.replace(
-    /<\/h4><br>/g,
-    "</h4>"
-  );
-
-  html = html.replace(
-    /<\/pre><br>/g,
-    "</pre>"
-  );
-
-  html = html.replace(
-    /<\/ul><br>/g,
-    "</ul>"
-  );
-
-  html = html.replace(
-    /<hr><br>/g,
-    "<hr>"
-  );
+    text =
+        text.replace(
+            /(<li>.*<\/li>)/gs,
+            "<ul>$1</ul>"
+        );
 
 
-  return html;
+    text =
+        text.replace(
+            /^\d+\. (.*)$/gm,
+            "<li>$1</li>"
+        );
+
+
+    text =
+        text.replace(
+            /(<li>.*<\/li>)/gs,
+            function(match) {
+
+                if (
+                    match.includes("<ul>")
+                ) {
+                    return match;
+                }
+
+                return `<ol>${match}</ol>`;
+
+            }
+        );
+
+
+    text =
+        text.replace(
+            /^---$/gm,
+            "<hr>"
+        );
+
+
+    text =
+        text.replace(
+            /\n/g,
+            "<br>"
+        );
+
+
+    codeBlocks.forEach(
+        (code, index) => {
+
+            text =
+                text.replace(
+                    `@@CODEBLOCK${index}@@`,
+                    `<pre><code>${code}</code></pre>`
+                );
+
+        }
+    );
+
+
+    text =
+        text.replace(
+            /<\/h([1-3])><br>/g,
+            "</h$1>"
+        );
+
+
+    text =
+        text.replace(
+            /<\/pre><br>/g,
+            "</pre>"
+        );
+
+
+    text =
+        text.replace(
+            /<\/ul><br>/g,
+            "</ul>"
+        );
+
+
+    text =
+        text.replace(
+            /<\/ol><br>/g,
+            "</ol>"
+        );
+
+
+    return text;
 
 }
 
 
 /* =========================================================
-   WELCOME SCREEN
-========================================================= */
-
-function showWelcome() {
-
-  if (!chat) {
-    return;
-  }
-
-  chat.innerHTML = `
-    <section class="welcome">
-
-      <div class="welcome-icon">
-        <img
-          src="icon.png"
-          alt="Chat AI Pro"
-        >
-      </div>
-
-      <h2>
-        مرحبًا بك في Chat AI Pro
-      </h2>
-
-      <p>
-        اكتب سؤالك وسأحاول مساعدتك.
-      </p>
-
-    </section>
-  `;
-
-}
-
-
-/* =========================================================
-   ADD MESSAGE TO SCREEN
+   ADD MESSAGE
 ========================================================= */
 
 function addMessage(
-  text,
-  role,
-  saveToConversation = true
+    role,
+    text,
+    save = true
 ) {
 
-  if (!chat) {
-    return null;
-  }
+    if (welcome) {
 
-
-  /*
-    إذا كانت شاشة الترحيب موجودة
-    نحذفها عند أول رسالة.
-  */
-
-  const welcome =
-    chat.querySelector(".welcome");
-
-  if (welcome) {
-    welcome.remove();
-  }
-
-
-  const wrapper =
-    document.createElement("div");
-
-
-  wrapper.className =
-    "message " +
-    (
-      role === "user"
-        ? "user-message"
-        : "ai-message"
-    );
-
-
-  const bubble =
-    document.createElement("div");
-
-
-  bubble.className =
-    "bubble " +
-    (
-      role === "assistant"
-        ? "ai-bubble"
-        : ""
-    );
-
-
-  if (role === "user") {
-
-    /*
-      رسالة المستخدم تعرض كنص عادي
-      لمنع أي HTML.
-    */
-
-    bubble.textContent =
-      text;
-
-  } else {
-
-    /*
-      رسالة الذكاء الاصطناعي
-      تمر عبر Markdown.
-    */
-
-    bubble.innerHTML =
-      markdownToHTML(text);
-
-  }
-
-
-  wrapper.appendChild(
-    bubble
-  );
-
-
-  chat.appendChild(
-    wrapper
-  );
-
-
-  scrollToBottom();
-
-
-  /*
-    حفظ الرسالة في المحادثة الحالية
-  */
-
-  if (
-    saveToConversation &&
-    currentConversationId
-  ) {
-
-    const conversation =
-      conversations.find(
-        item =>
-          item.id ===
-          currentConversationId
-      );
-
-    if (conversation) {
-
-      conversation.messages.push({
-        role:
-          role === "user"
-            ? "user"
-            : "assistant",
-
-        content:
-          String(text),
-
-        timestamp:
-          Date.now()
-      });
-
-
-      conversation.updatedAt =
-        Date.now();
-
-
-      saveConversations();
-
-      renderConversationList();
+        welcome.style.display =
+            "none";
 
     }
 
-  }
+
+    const row =
+        document.createElement("div");
+
+    row.className =
+        `message-row ${role}`;
 
 
-  return wrapper;
+    const bubble =
+        document.createElement("div");
+
+    bubble.className =
+        "message-bubble";
+
+
+    if (role === "assistant") {
+
+        bubble.innerHTML =
+            markdownToHTML(text);
+
+    } else {
+
+        bubble.textContent =
+            text;
+
+    }
+
+
+    row.appendChild(bubble);
+
+    chat.appendChild(row);
+
+
+    if (save) {
+
+        const conversation =
+            getCurrentConversation();
+
+        if (conversation) {
+
+            conversation.messages.push({
+
+                role: role,
+
+                content: text,
+
+                createdAt: Date.now()
+
+            });
+
+            conversation.updatedAt =
+                Date.now();
+
+            saveConversations();
+
+        }
+
+    }
+
+
+    scrollToBottom();
+
+}
+
+
+/* =========================================================
+   RENDER CURRENT
+========================================================= */
+
+function renderCurrentConversation() {
+
+    const conversation =
+        getCurrentConversation();
+
+    chat.innerHTML = "";
+
+
+    if (!conversation) {
+
+        if (welcome) {
+
+            chat.appendChild(
+                welcome
+            );
+
+            welcome.style.display =
+                "";
+
+        }
+
+        return;
+
+    }
+
+
+    if (
+        conversation.messages.length === 0
+    ) {
+
+        const welcomeClone =
+            document.createElement("section");
+
+        welcomeClone.className =
+            "welcome";
+
+        welcomeClone.innerHTML =
+            `
+            <div class="welcome-icon">
+                <img
+                    src="icon.png"
+                    alt="Chat AI Pro"
+                >
+            </div>
+
+            <h2>
+                مرحبًا بك في Chat AI Pro
+            </h2>
+
+            <p>
+                اكتب سؤالك وسأحاول مساعدتك.
+            </p>
+            `;
+
+        chat.appendChild(
+            welcomeClone
+        );
+
+        return;
+
+    }
+
+
+    conversation.messages.forEach(
+        message => {
+
+            addMessage(
+                message.role,
+                message.content,
+                false
+            );
+
+        }
+    );
 
 }
 
@@ -553,48 +1345,52 @@ function addMessage(
 
 function addLoadingMessage() {
 
-  if (!chat) {
-    return null;
-  }
+    const row =
+        document.createElement("div");
+
+    row.className =
+        "message-row assistant";
+
+    row.id =
+        "aiLoadingMessage";
 
 
-  const wrapper =
-    document.createElement("div");
+    const bubble =
+        document.createElement("div");
+
+    bubble.className =
+        "message-bubble";
 
 
-  wrapper.className =
-    "message ai-message";
+    bubble.innerHTML =
+        `
+        <div class="loading-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        `;
 
 
-  const bubble =
-    document.createElement("div");
+    row.appendChild(bubble);
+
+    chat.appendChild(row);
+
+    scrollToBottom();
+
+}
 
 
-  bubble.className =
-    "bubble ai-bubble loading-bubble";
+function removeLoadingMessage() {
 
+    const loading =
+        document.getElementById(
+            "aiLoadingMessage"
+        );
 
-  bubble.innerHTML = `
-    <span class="typing-dot"></span>
-    <span class="typing-dot"></span>
-    <span class="typing-dot"></span>
-  `;
-
-
-  wrapper.appendChild(
-    bubble
-  );
-
-
-  chat.appendChild(
-    wrapper
-  );
-
-
-  scrollToBottom();
-
-
-  return wrapper;
+    if (loading) {
+        loading.remove();
+    }
 
 }
 
@@ -605,560 +1401,16 @@ function addLoadingMessage() {
 
 function scrollToBottom() {
 
-  if (!chat) {
-    return;
-  }
-
-  requestAnimationFrame(
-    () => {
-
-      chat.scrollTop =
-        chat.scrollHeight;
-
-    }
-  );
-
-}
-
-
-/* =========================================================
-   CREATE NEW CONVERSATION
-========================================================= */
-
-function createNewConversation() {
-
-  const id =
-    createId();
-
-
-  const now =
-    Date.now();
-
-
-  const conversation = {
-
-    id,
-
-    title:
-      "محادثة جديدة",
-
-    createdAt:
-      now,
-
-    updatedAt:
-      now,
-
-    messages:
-      []
-
-  };
-
-
-  conversations.unshift(
-    conversation
-  );
-
-
-  currentConversationId =
-    id;
-
-
-  saveConversations();
-
-  renderConversationList();
-
-  showWelcome();
-
-  closeSidebarMobile();
-
-  if (messageInput) {
-
-    messageInput.value = "";
-
-    autoResizeTextarea();
-
-    messageInput.focus();
-
-  }
-
-}
-
-
-/* =========================================================
-   LOAD CONVERSATION
-========================================================= */
-
-function loadConversation(id) {
-
-  const conversation =
-    conversations.find(
-      item =>
-        item.id === id
-    );
-
-
-  if (!conversation) {
-    return;
-  }
-
-
-  currentConversationId =
-    id;
-
-
-  if (!chat) {
-    return;
-  }
-
-
-  chat.innerHTML = "";
-
-
-  if (
-    !conversation.messages ||
-    conversation.messages.length === 0
-  ) {
-
-    showWelcome();
-
-  } else {
-
-    conversation.messages.forEach(
-      message => {
-
-        addMessage(
-          message.content,
-          message.role,
-          false
-        );
-
-      }
-    );
-
-  }
-
-
-  renderConversationList();
-
-  closeSidebarMobile();
-
-  scrollToBottom();
-
-}
-
-
-/* =========================================================
-   DELETE CONVERSATION
-========================================================= */
-
-function deleteConversation(
-  id,
-  event
-) {
-
-  if (event) {
-    event.stopPropagation();
-  }
-
-
-  const index =
-    conversations.findIndex(
-      item =>
-        item.id === id
-    );
-
-
-  if (index === -1) {
-    return;
-  }
-
-
-  conversations.splice(
-    index,
-    1
-  );
-
-
-  saveConversations();
-
-
-  /*
-    إذا حذفنا المحادثة الحالية
-  */
-
-  if (
-    currentConversationId === id
-  ) {
-
-    currentConversationId =
-      null;
-
-
-    if (
-      conversations.length > 0
-    ) {
-
-      loadConversation(
-        conversations[0].id
-      );
-
-    } else {
-
-      showWelcome();
-
-      renderConversationList();
-
-    }
-
-  } else {
-
-    renderConversationList();
-
-  }
-
-}
-
-
-/* =========================================================
-   RENAME CONVERSATION
-========================================================= */
-
-function renameConversation(
-  id,
-  event
-) {
-
-  if (event) {
-    event.stopPropagation();
-  }
-
-
-  const conversation =
-    conversations.find(
-      item =>
-        item.id === id
-    );
-
-
-  if (!conversation) {
-    return;
-  }
-
-
-  const newTitle =
-    prompt(
-      "اكتب اسم المحادثة الجديد:",
-      conversation.title
-    );
-
-
-  if (
-    newTitle === null
-  ) {
-    return;
-  }
-
-
-  const title =
-    newTitle.trim();
-
-
-  if (!title) {
-    return;
-  }
-
-
-  conversation.title =
-    title;
-
-
-  conversation.updatedAt =
-    Date.now();
-
-
-  saveConversations();
-
-  renderConversationList();
-
-}
-
-
-/* =========================================================
-   GET CONVERSATION TITLE
-========================================================= */
-
-function getConversationTitle(
-  conversation
-) {
-
-  if (
-    conversation.title &&
-    conversation.title !== "محادثة جديدة"
-  ) {
-
-    return conversation.title;
-
-  }
-
-
-  const firstUserMessage =
-    conversation.messages?.find(
-      message =>
-        message.role === "user"
-    );
-
-
-  if (
-    firstUserMessage &&
-    firstUserMessage.content
-  ) {
-
-    let title =
-      firstUserMessage.content
-        .replace(/\s+/g, " ")
-        .trim();
-
-
-    if (title.length > 32) {
-
-      title =
-        title.substring(0, 32) +
-        "...";
-
-    }
-
-
-    return title;
-
-  }
-
-
-  return "محادثة جديدة";
-
-}
-
-
-/* =========================================================
-   RENDER SIDEBAR HISTORY
-========================================================= */
-
-function renderConversationList() {
-
-  if (!conversationList) {
-    return;
-  }
-
-
-  conversationList.innerHTML = "";
-
-
-  if (
-    conversations.length === 0
-  ) {
-
-    conversationList.innerHTML = `
-      <div class="empty-history">
-        لا توجد محادثات سابقة بعد.<br>
-        ابدأ محادثة جديدة وستظهر هنا.
-      </div>
-    `;
-
-    return;
-
-  }
-
-
-  /*
-    الأحدث أولًا
-  */
-
-  const sorted =
-    [...conversations].sort(
-      (a, b) =>
-        (b.updatedAt || 0) -
-        (a.updatedAt || 0)
-    );
-
-
-  sorted.forEach(
-    conversation => {
-
-      const item =
-        document.createElement("div");
-
-
-      item.className =
-        "conversation-item";
-
-
-      if (
-        conversation.id ===
-        currentConversationId
-      ) {
-
-        item.classList.add(
-          "active"
-        );
-
-      }
-
-
-      const main =
-        document.createElement("div");
-
-
-      main.className =
-        "conversation-main";
-
-
-      const name =
-        document.createElement("div");
-
-
-      name.className =
-        "conversation-name";
-
-
-      name.textContent =
-        getConversationTitle(
-          conversation
-        );
-
-
-      const date =
-        document.createElement("div");
-
-
-      date.className =
-        "conversation-date";
-
-
-      date.textContent =
-        formatDate(
-          conversation.updatedAt ||
-          conversation.createdAt
-        );
-
-
-      main.appendChild(
-        name
-      );
-
-      main.appendChild(
-        date
-      );
-
-
-      const actions =
-        document.createElement("div");
-
-
-      actions.className =
-        "conversation-actions";
-
-
-      const renameBtn =
-        document.createElement("button");
-
-
-      renameBtn.className =
-        "conversation-action";
-
-
-      renameBtn.type =
-        "button";
-
-
-      renameBtn.title =
-        "إعادة تسمية";
-
-
-      renameBtn.textContent =
-        "✎";
-
-
-      renameBtn.addEventListener(
-        "click",
-        event => {
-
-          renameConversation(
-            conversation.id,
-            event
-          );
-
-        }
-      );
-
-
-      const deleteBtn =
-        document.createElement("button");
-
-
-      deleteBtn.className =
-        "conversation-action delete";
-
-
-      deleteBtn.type =
-        "button";
-
-
-      deleteBtn.title =
-        "حذف";
-
-
-      deleteBtn.textContent =
-        "×";
-
-
-      deleteBtn.addEventListener(
-        "click",
-        event => {
-
-          deleteConversation(
-            conversation.id,
-            event
-          );
-
-        }
-      );
-
-
-      actions.appendChild(
-        renameBtn
-      );
-
-      actions.appendChild(
-        deleteBtn
-      );
-
-
-      item.appendChild(
-        main
-      );
-
-      item.appendChild(
-        actions
-      );
-
-
-      item.addEventListener(
-        "click",
+    requestAnimationFrame(
         () => {
 
-          loadConversation(
-            conversation.id
-          );
+            chat.scrollTo({
+                top: chat.scrollHeight,
+                behavior: "smooth"
+            });
 
         }
-      );
-
-
-      conversationList.appendChild(
-        item
-      );
-
-    }
-  );
+    );
 
 }
 
@@ -1169,363 +1421,201 @@ function renderConversationList() {
 
 async function sendMessage() {
 
-  if (isSending) {
-    return;
-  }
+    if (isSending) return;
+
+    const text =
+        messageInput.value.trim();
+
+    if (!text) return;
 
 
-  if (!messageInput) {
-    return;
-  }
+    let conversation =
+        getCurrentConversation();
 
 
-  const text =
-    messageInput.value.trim();
+    if (!conversation) {
+
+        createNewConversation();
+
+        conversation =
+            getCurrentConversation();
+
+    }
 
 
-  if (!text) {
-    return;
-  }
+    /*
+     * First user message becomes the title.
+     */
+
+    if (
+        conversation.messages.length === 0
+    ) {
+
+        conversation.title =
+            generateTitle(text);
+
+    }
 
 
-  /*
-    إذا لم توجد محادثة
-    ننشئ واحدة تلقائيًا.
-  */
-
-  if (!currentConversationId) {
-
-    createNewConversation();
-
-  }
-
-
-  /*
-    تأكيد وجود المحادثة
-  */
-
-  let conversation =
-    conversations.find(
-      item =>
-        item.id ===
-        currentConversationId
+    addMessage(
+        "user",
+        text,
+        true
     );
 
 
-  if (!conversation) {
+    messageInput.value = "";
 
-    createNewConversation();
-
-
-    conversation =
-      conversations.find(
-        item =>
-          item.id ===
-          currentConversationId
-      );
-
-  }
+    autoResizeTextarea();
 
 
-  if (!conversation) {
-    return;
-  }
+    isSending = true;
 
-
-  isSending = true;
-
-
-  if (sendBtn) {
     sendBtn.disabled = true;
-  }
 
 
-  /*
-    إضافة رسالة المستخدم
-  */
-
-  addMessage(
-    text,
-    "user",
-    true
-  );
-
-
-  /*
-    تحديث اسم المحادثة
-    من أول رسالة.
-  */
-
-  if (
-    conversation.title ===
-    "محادثة جديدة"
-  ) {
-
-    conversation.title =
-      getConversationTitle(
-        conversation
-      );
-
-  }
-
-
-  conversation.updatedAt =
-    Date.now();
-
-
-  saveConversations();
-
-  renderConversationList();
-
-
-  /*
-    تنظيف مربع الكتابة
-  */
-
-  messageInput.value = "";
-
-  autoResizeTextarea();
-
-
-  /*
-    Loading
-  */
-
-  const loading =
     addLoadingMessage();
-
-
-  try {
-
-    /*
-      نرسل سجل المحادثة كاملًا
-      إلى السيرفر.
-    */
-
-    const history =
-      conversation.messages.map(
-        message => ({
-
-          role:
-            message.role,
-
-          content:
-            message.content
-
-        })
-      );
-
-
-    const response =
-      await fetch(
-        "/api/chat",
-        {
-
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
-
-          body:
-            JSON.stringify({
-              messages:
-                history
-            })
-
-        }
-      );
-
-
-    /*
-      محاولة قراءة JSON
-    */
-
-    let data = null;
 
 
     try {
 
-      data =
-        await response.json();
+        const response =
+            await fetch(
+                "/api/chat",
+                {
+                    method: "POST",
 
-    } catch (jsonError) {
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
 
-      data = null;
+                    body: JSON.stringify({
 
-    }
+                        messages:
+                            conversation.messages.map(
+                                message => ({
+                                    role:
+                                        message.role,
+                                    content:
+                                        message.content
+                                })
+                            )
 
+                    })
 
-    /*
-      إذا كان السيرفر أعاد خطأ
-    */
-
-    if (!response.ok) {
-
-      const serverMessage =
-        data?.error ||
-        data?.message ||
-        "حدث خطأ في الخادم.";
-
-      throw new Error(
-        serverMessage
-      );
-
-    }
-
-
-    /*
-      استخراج الإجابة
-      مهما كان شكلها البسيط.
-    */
-
-    let answer =
-      data?.reply ||
-      data?.response ||
-      data?.message ||
-      data?.text ||
-      data?.content;
+                }
+            );
 
 
-    /*
-      بعض السيرفرات قد ترجع:
-      { answer: "..." }
-    */
+        let data = {};
 
-    if (!answer) {
+        try {
 
-      answer =
-        data?.answer;
+            data =
+                await response.json();
 
-    }
+        } catch {
+
+            data = {};
+
+        }
 
 
-    /*
-      حماية إضافية إذا رجعت
-      البيانات بشكل مختلف.
-    */
+        if (!response.ok) {
 
-    if (
-      typeof answer !==
-      "string"
-    ) {
+            throw new Error(
+                data.error ||
+                data.message ||
+                "تعذر الحصول على إجابة."
+            );
 
-      answer =
-        String(
-          answer || ""
+        }
+
+
+        const answer =
+            data.reply ||
+            data.response ||
+            data.answer ||
+            data.message;
+
+
+        if (!answer) {
+
+            throw new Error(
+                "لم يتم استلام إجابة من الخادم."
+            );
+
+        }
+
+
+        removeLoadingMessage();
+
+
+        addMessage(
+            "assistant",
+            answer,
+            true
         );
 
+
+        conversation =
+            getCurrentConversation();
+
+        if (conversation) {
+
+            conversation.updatedAt =
+                Date.now();
+
+            saveConversations();
+
+            renderConversationList();
+
+        }
+
+
+    } catch (error) {
+
+        console.error(
+            "Chat error:",
+            error
+        );
+
+        removeLoadingMessage();
+
+
+        addMessage(
+            "assistant",
+            "حدث خطأ: " +
+            (
+                error.message ||
+                "تعذر الحصول على إجابة حاليًا."
+            ),
+            false
+        );
+
+    } finally {
+
+        isSending = false;
+
+        sendBtn.disabled = false;
+
+        messageInput.focus();
+
     }
-
-
-    answer =
-      answer.trim();
-
-
-    if (!answer) {
-
-      throw new Error(
-        "لم تصل إجابة من الذكاء الاصطناعي."
-      );
-
-    }
-
-
-    /*
-      إزالة Loading
-    */
-
-    if (loading) {
-      loading.remove();
-    }
-
-
-    /*
-      إضافة الإجابة
-    */
-
-    addMessage(
-      answer,
-      "assistant",
-      true
-    );
-
-
-  } catch (error) {
-
-    console.error(
-      "Chat API Error:",
-      error
-    );
-
-
-    /*
-      إزالة Loading
-    */
-
-    if (loading) {
-      loading.remove();
-    }
-
-
-    /*
-      رسالة الخطأ للمستخدم
-    */
-
-    addMessage(
-      "حدث خطأ أثناء الحصول على الإجابة. حاول مرة أخرى بعد قليل.",
-      "assistant",
-      false
-    );
-
-  } finally {
-
-    isSending = false;
-
-
-    if (sendBtn) {
-      sendBtn.disabled = false;
-    }
-
-
-    if (messageInput) {
-      messageInput.focus();
-    }
-
-  }
 
 }
 
 
 /* =========================================================
-   TEXTAREA AUTO RESIZE
+   NEW CHAT
 ========================================================= */
 
-function autoResizeTextarea() {
+function newChat() {
 
-  if (!messageInput) {
-    return;
-  }
+    createNewConversation();
 
-
-  messageInput.style.height =
-    "auto";
-
-
-  const maxHeight =
-    150;
-
-
-  const newHeight =
-    Math.min(
-      messageInput.scrollHeight,
-      maxHeight
-    );
-
-
-  messageInput.style.height =
-    newHeight + "px";
+    messageInput.focus();
 
 }
 
@@ -1536,43 +1626,46 @@ function autoResizeTextarea() {
 
 function clearCurrentChat() {
 
-  /*
-    إذا كانت هناك محادثة حالية
-    نحذفها من السجل أيضًا.
-  */
+    const conversation =
+        getCurrentConversation();
 
-  if (currentConversationId) {
-
-    conversations =
-      conversations.filter(
-        conversation =>
-          conversation.id !==
-          currentConversationId
-      );
-
-  }
+    if (!conversation) return;
 
 
-  currentConversationId =
-    null;
+    if (
+        conversation.messages.length === 0
+    ) {
+        return;
+    }
 
 
-  saveConversations();
+    const confirmed =
+        window.confirm(
+            "هل تريد بدء محادثة جديدة؟"
+        );
 
-  renderConversationList();
-
-  showWelcome();
+    if (!confirmed) return;
 
 
-  if (messageInput) {
+    createNewConversation();
 
-    messageInput.value = "";
+}
 
-    autoResizeTextarea();
 
-    messageInput.focus();
+/* =========================================================
+   TEXTAREA
+========================================================= */
 
-  }
+function autoResizeTextarea() {
+
+    messageInput.style.height =
+        "auto";
+
+    messageInput.style.height =
+        Math.min(
+            messageInput.scrollHeight,
+            150
+        ) + "px";
 
 }
 
@@ -1581,156 +1674,251 @@ function clearCurrentChat() {
    MOBILE SIDEBAR
 ========================================================= */
 
-function openSidebarMobile() {
+function openSidebar() {
 
-  if (!sidebar) {
-    return;
-  }
+    if (!sidebar) return;
 
-  sidebar.classList.add(
-    "open"
-  );
-
-
-  if (sidebarOverlay) {
-
-    sidebarOverlay.classList.add(
-      "active"
+    sidebar.classList.add(
+        "open"
     );
 
-  }
+    sidebarOverlay.classList.add(
+        "show"
+    );
 
 }
 
 
-function closeSidebarMobile() {
+function closeSidebar() {
 
-  if (!sidebar) {
-    return;
-  }
+    if (!sidebar) return;
 
-  sidebar.classList.remove(
-    "open"
-  );
-
-
-  if (sidebarOverlay) {
-
-    sidebarOverlay.classList.remove(
-      "active"
+    sidebar.classList.remove(
+        "open"
     );
 
-  }
+    sidebarOverlay.classList.remove(
+        "show"
+    );
 
 }
 
 
 /* =========================================================
-   EVENT LISTENERS
+   EVENTS
 ========================================================= */
 
 
-/*
-  إرسال بالزر
-*/
+/* Send OTP */
+
+if (sendOtpBtn) {
+
+    sendOtpBtn.addEventListener(
+        "click",
+        sendOtp
+    );
+
+}
+
+
+/* Verify OTP */
+
+if (verifyOtpBtn) {
+
+    verifyOtpBtn.addEventListener(
+        "click",
+        verifyOtp
+    );
+
+}
+
+
+/* Resend */
+
+if (resendOtpBtn) {
+
+    resendOtpBtn.addEventListener(
+        "click",
+        resendOtp
+    );
+
+}
+
+
+/* Back */
+
+if (backToPhoneBtn) {
+
+    backToPhoneBtn.addEventListener(
+        "click",
+        () => {
+
+            showPhoneStep();
+
+        }
+    );
+
+}
+
+
+/* Enter on phone */
+
+if (phoneInput) {
+
+    phoneInput.addEventListener(
+        "keydown",
+        event => {
+
+            if (
+                event.key === "Enter"
+            ) {
+
+                event.preventDefault();
+
+                sendOtp();
+
+            }
+
+        }
+    );
+
+}
+
+
+/* Enter on OTP */
+
+if (otpInput) {
+
+    otpInput.addEventListener(
+        "input",
+        () => {
+
+            otpInput.value =
+                otpInput.value
+                    .replace(/\D/g, "")
+                    .slice(0, 8);
+
+        }
+    );
+
+
+    otpInput.addEventListener(
+        "keydown",
+        event => {
+
+            if (
+                event.key === "Enter"
+            ) {
+
+                event.preventDefault();
+
+                verifyOtp();
+
+            }
+
+        }
+    );
+
+}
+
+
+/* Send message */
 
 if (sendBtn) {
 
-  sendBtn.addEventListener(
-    "click",
-    sendMessage
-  );
+    sendBtn.addEventListener(
+        "click",
+        sendMessage
+    );
 
 }
 
 
-/*
-  Enter = إرسال
-  Shift + Enter = سطر جديد
-*/
+/* Enter in message */
 
 if (messageInput) {
 
-  messageInput.addEventListener(
-    "keydown",
-    event => {
-
-      if (
-        event.key === "Enter" &&
-        !event.shiftKey
-      ) {
-
-        event.preventDefault();
-
-        sendMessage();
-
-      }
-
-    }
-  );
+    messageInput.addEventListener(
+        "input",
+        autoResizeTextarea
+    );
 
 
-  messageInput.addEventListener(
-    "input",
-    autoResizeTextarea
-  );
+    messageInput.addEventListener(
+        "keydown",
+        event => {
+
+            if (
+                event.key === "Enter" &&
+                !event.shiftKey
+            ) {
+
+                event.preventDefault();
+
+                sendMessage();
+
+            }
+
+        }
+    );
 
 }
 
 
-/*
-  محادثة جديدة
-*/
+/* New chat */
 
 if (newChatBtn) {
 
-  newChatBtn.addEventListener(
-    "click",
-    createNewConversation
-  );
+    newChatBtn.addEventListener(
+        "click",
+        newChat
+    );
 
 }
 
 
-/*
-  زر المحادثة الجديدة الموجود
-  في أعلى الصفحة
-*/
+/* Top new chat */
 
 if (clearBtn) {
 
-  clearBtn.addEventListener(
-    "click",
-    createNewConversation
-  );
+    clearBtn.addEventListener(
+        "click",
+        clearCurrentChat
+    );
 
 }
 
 
-/*
-  فتح القائمة في الجوال
-*/
+/* Logout */
+
+if (logoutBtn) {
+
+    logoutBtn.addEventListener(
+        "click",
+        logout
+    );
+
+}
+
+
+/* Mobile menu */
 
 if (menuBtn) {
 
-  menuBtn.addEventListener(
-    "click",
-    openSidebarMobile
-  );
+    menuBtn.addEventListener(
+        "click",
+        openSidebar
+    );
 
 }
 
 
-/*
-  إغلاق القائمة
-*/
-
 if (sidebarOverlay) {
 
-  sidebarOverlay.addEventListener(
-    "click",
-    closeSidebarMobile
-  );
+    sidebarOverlay.addEventListener(
+        "click",
+        closeSidebar
+    );
 
 }
 
@@ -1739,83 +1927,67 @@ if (sidebarOverlay) {
    INITIALIZATION
 ========================================================= */
 
-function initializeApp() {
+function initialize() {
 
-  /*
-    تحميل المحادثات
-  */
-
-  loadConversations();
+    const auth =
+        getAuth();
 
 
-  /*
-    عرض سجل المحادثات
-  */
+    if (
+        auth &&
+        auth.authenticated &&
+        auth.phone
+    ) {
 
-  renderConversationList();
+        authScreen.classList.add(
+            "hidden"
+        );
 
+        app.classList.remove(
+            "hidden"
+        );
 
-  /*
-    إذا كان هناك محادثات محفوظة
-    افتح آخر محادثة.
-  */
+        userPhone.textContent =
+            fullSaudiPhone(
+                normalizeSaudiPhone(
+                    auth.phone
+                )
+            );
 
-  if (
-    conversations.length > 0
-  ) {
+        loadConversations();
 
-    const latest =
-      [...conversations].sort(
-        (a, b) =>
-          (b.updatedAt || 0) -
-          (a.updatedAt || 0)
-      )[0];
+        if (
+            conversations.length === 0
+        ) {
 
+            createNewConversation();
 
-    if (latest) {
+        } else {
 
-      loadConversation(
-        latest.id
-      );
+            currentConversationId =
+                conversations[0].id;
+
+            renderConversationList();
+
+            renderCurrentConversation();
+
+        }
+
+    } else {
+
+        authScreen.classList.remove(
+            "hidden"
+        );
+
+        app.classList.add(
+            "hidden"
+        );
+
+        showPhoneStep();
 
     }
 
-  } else {
-
-    /*
-      لا توجد محادثات
-    */
-
-    showWelcome();
-
-  }
-
-
-  /*
-    ضبط مربع الكتابة
-  */
-
-  autoResizeTextarea();
-
 }
 
 
-/* =========================================================
-   START
-========================================================= */
-
-if (
-  document.readyState ===
-  "loading"
-) {
-
-  document.addEventListener(
-    "DOMContentLoaded",
-    initializeApp
-  );
-
-} else {
-
-  initializeApp();
-
-}
+initialize();
