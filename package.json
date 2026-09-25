@@ -1,13 +1,14 @@
 {
-  "name": "anas-ai",
+  "name": "chat-ai-pro",
   "version": "1.0.0",
-  "private": true,
+  "description": "Chat AI Pro",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "dotenv": "^16.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
     "express": "^5.1.0"
   }
 }
