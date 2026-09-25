@@ -1,44 +1,79 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>chat ai pro</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
-  <link rel="icon" type="image/png" href="icon.png">
+  <title>Chat AI Pro</title>
+
+  <!-- ملف التصميم -->
+  <link
+    rel="stylesheet"
+    href="style.css"
+  >
+
+  <!-- أيقونة التطبيق -->
+  <link
+    rel="icon"
+    type="image/png"
+    href="icon.png"
+  >
 </head>
 
 <body>
 
   <div class="app">
 
+    <!-- الشريط العلوي -->
     <header class="topbar">
 
       <div class="brand">
 
-        <div class="logo">AI</div>
+        <div class="logo">
+          AI
+        </div>
 
         <div>
-          <h1>Anas AI Pro</h1>
-          <span>مساعدك الذكي</span>
+          <h1>Chat AI Pro</h1>
+
+          <span>
+            مساعدك الذكي
+          </span>
         </div>
 
       </div>
 
-      <button id="clearBtn" class="ghost">
+      <button
+        id="clearBtn"
+        class="ghost"
+        type="button"
+      >
         محادثة جديدة
       </button>
 
     </header>
 
-    <main id="chat" class="chat">
+
+    <!-- منطقة المحادثة -->
+    <main
+      id="chat"
+      class="chat"
+    >
 
       <section class="welcome">
 
-        <div class="welcome-icon">✦</div>
+        <div class="welcome-icon">
+          ✦
+        </div>
 
-        <h2>مرحبًا بك في Anas AI Pro</h2>
+        <h2>
+          مرحبًا بك في Chat AI Pro
+        </h2>
 
         <p>
           اكتب سؤالك وسأحاول مساعدتك.
@@ -48,6 +83,8 @@
 
     </main>
 
+
+    <!-- منطقة كتابة الرسالة -->
     <div class="composer-wrap">
 
       <div class="composer">
@@ -56,11 +93,13 @@
           id="message"
           rows="1"
           placeholder="اكتب رسالتك هنا..."
+          autocomplete="off"
         ></textarea>
 
         <button
           id="sendBtn"
           class="send"
+          type="button"
           aria-label="إرسال"
         >
           ➤
@@ -76,7 +115,10 @@
 
   </div>
 
+
+  <!-- ملف JavaScript -->
   <script src="script.js"></script>
 
 </body>
+
 </html>
