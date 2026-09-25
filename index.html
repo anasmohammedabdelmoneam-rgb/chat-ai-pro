@@ -11,13 +11,11 @@
 
   <title>Chat AI Pro</title>
 
-  <!-- ملف التصميم -->
   <link
     rel="stylesheet"
     href="style.css"
   >
 
-  <!-- أيقونة التطبيق -->
   <link
     rel="icon"
     type="image/png"
@@ -29,94 +27,206 @@
 
   <div class="app">
 
-    <!-- الشريط العلوي -->
-    <header class="topbar">
+    <!-- =================================================
+         SIDEBAR
+    ================================================== -->
 
-      <div class="brand">
-
-       <div class="logo">
-  <img src="icon.png" alt="Chat AI Pro">
-</div>
-
-        <div>
-          <h1>Chat AI Pro</h1>
-
-          <span>
-            مساعدك الذكي
-          </span>
-        </div>
-
-      </div>
-
-      <button
-        id="clearBtn"
-        class="ghost"
-        type="button"
-      >
-        محادثة جديدة
-      </button>
-
-    </header>
-
-
-    <!-- منطقة المحادثة -->
-    <main
-      id="chat"
-      class="chat"
+    <aside
+      id="sidebar"
+      class="sidebar"
     >
 
-      <section class="welcome">
-
-       <div class="welcome-icon">
-  <img src="icon.png" alt="Chat AI Pro">
-</div>
-
-        <h2>
-          مرحبًا بك في Chat AI Pro
-        </h2>
-
-        <p>
-          اكتب سؤالك وسأحاول مساعدتك.
-        </p>
-
-      </section>
-
-    </main>
-
-
-    <!-- منطقة كتابة الرسالة -->
-    <div class="composer-wrap">
-
-      <div class="composer">
-
-        <textarea
-          id="message"
-          rows="1"
-          placeholder="اكتب رسالتك هنا..."
-          autocomplete="off"
-        ></textarea>
+      <div class="sidebar-top">
 
         <button
-          id="sendBtn"
-          class="send"
+          id="newChatBtn"
+          class="new-chat-btn"
           type="button"
-          aria-label="إرسال"
         >
-          ➤
+
+          <span class="new-chat-icon">
+            +
+          </span>
+
+          <span>
+            محادثة جديدة
+          </span>
+
         </button>
 
       </div>
 
-      <small>
-        لا تضع مفتاح API داخل هذا الموقع أو GitHub.
-      </small>
 
-    </div>
+      <div class="history-title">
+
+        <span>
+          سجل المحادثات
+        </span>
+
+      </div>
+
+
+      <div
+        id="conversationList"
+        class="conversation-list"
+      >
+      </div>
+
+
+      <div class="sidebar-bottom">
+
+        <div class="storage-note">
+
+          يتم حفظ المحادثات
+          على هذا الجهاز
+
+        </div>
+
+      </div>
+
+    </aside>
+
+
+    <!-- =================================================
+         MAIN AREA
+    ================================================== -->
+
+    <main class="main">
+
+      <!-- TOP BAR -->
+
+      <header class="topbar">
+
+        <div class="topbar-right">
+
+          <button
+            id="sidebarToggle"
+            class="menu-btn"
+            type="button"
+            aria-label="فتح سجل المحادثات"
+          >
+            ☰
+          </button>
+
+
+          <div class="brand">
+
+            <div class="logo">
+
+              <img
+                src="icon.png"
+                alt="Chat AI Pro"
+              >
+
+            </div>
+
+
+            <div class="brand-text">
+
+              <h1>
+                Chat AI Pro
+              </h1>
+
+              <span>
+                مساعدك الذكي
+              </span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <button
+          id="topNewChat"
+          class="ghost"
+          type="button"
+        >
+          محادثة جديدة
+        </button>
+
+      </header>
+
+
+      <!-- CHAT -->
+
+      <main
+        id="chat"
+        class="chat"
+      >
+
+        <section class="welcome">
+
+          <div class="welcome-icon">
+
+            <img
+              src="icon.png"
+              alt="Chat AI Pro"
+            >
+
+          </div>
+
+
+          <h2>
+            مرحبًا بك في Chat AI Pro
+          </h2>
+
+
+          <p>
+            اكتب سؤالك وسأحاول مساعدتك.
+          </p>
+
+        </section>
+
+      </main>
+
+
+      <!-- COMPOSER -->
+
+      <div class="composer-wrap">
+
+        <div class="composer">
+
+          <textarea
+            id="message"
+            rows="1"
+            placeholder="اكتب رسالتك هنا..."
+            autocomplete="off"
+          ></textarea>
+
+
+          <button
+            id="sendBtn"
+            class="send"
+            type="button"
+            aria-label="إرسال"
+          >
+            ➤
+          </button>
+
+        </div>
+
+
+        <small>
+          لا تضع مفتاح API داخل هذا الموقع أو GitHub.
+        </small>
+
+      </div>
+
+    </main>
 
   </div>
 
 
-  <!-- ملف JavaScript -->
+  <!-- OVERLAY FOR MOBILE -->
+
+  <div
+    id="sidebarOverlay"
+    class="sidebar-overlay"
+  ></div>
+
+
   <script src="script.js"></script>
 
 </body>
