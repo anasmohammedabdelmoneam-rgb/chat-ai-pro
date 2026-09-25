@@ -1,80 +1,79 @@
 /* =========================================================
-   CHAT AI PRO
-   CHAT HISTORY SYSTEM
+   CHAT AI PRO - SCRIPT.JS
 ========================================================= */
 
-const chat =
-  document.getElementById("chat");
 
-const messageInput =
-  document.getElementById("message");
+/* =========================================================
+   ELEMENTS
+========================================================= */
 
-const sendBtn =
-  document.getElementById("sendBtn");
+const chat = document.getElementById("chat");
+const messageInput = document.getElementById("message");
+const sendBtn = document.getElementById("sendBtn");
 
-const clearBtn =
-  document.getElementById("topNewChat");
+const clearBtn = document.getElementById("clearBtn");
+
+const sidebar = document.querySelector(".sidebar");
+const sidebarOverlay = document.querySelector(".sidebar-overlay");
+const conversationList =
+  document.querySelector(".conversation-list");
 
 const newChatBtn =
-  document.getElementById("newChatBtn");
+  document.querySelector(".new-chat-btn");
 
-const conversationList =
-  document.getElementById(
-    "conversationList"
-  );
-
-const sidebar =
-  document.getElementById("sidebar");
-
-const sidebarToggle =
-  document.getElementById(
-    "sidebarToggle"
-  );
-
-const sidebarOverlay =
-  document.getElementById(
-    "sidebarOverlay"
-  );
+const menuBtn =
+  document.querySelector(".menu-btn");
 
 
 /* =========================================================
-   STORAGE
-========================================================= */
-
-const STORAGE_KEY =
-  "chat_ai_pro_conversations_v1";
-
-
-/* =========================================================
-   CURRENT STATE
+   STATE
 ========================================================= */
 
 let conversations = [];
 
 let currentConversationId = null;
 
-let history = [];
-
 let isSending = false;
 
 
 /* =========================================================
-   LOAD CONVERSATIONS
+   LOCAL STORAGE
 ========================================================= */
+
+const STORAGE_KEY =
+  "chat_ai_pro_conversations";
+
+
+function saveConversations() {
+
+  try {
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(conversations)
+    );
+
+  } catch (error) {
+
+    console.error(
+      "تعذر حفظ المحادثات:",
+      error
+    );
+
+  }
+
+}
+
 
 function loadConversations() {
 
   try {
 
     const saved =
-      localStorage.getItem(
-        STORAGE_KEY
-      );
+      localStorage.getItem(STORAGE_KEY);
 
     if (!saved) {
-
       conversations = [];
-
       return;
     }
 
@@ -94,42 +93,19 @@ function loadConversations() {
   } catch (error) {
 
     console.error(
-      "Could not load conversations:",
+      "تعذر تحميل المحادثات:",
       error
     );
 
     conversations = [];
+
   }
+
 }
 
 
 /* =========================================================
-   SAVE CONVERSATIONS
-========================================================= */
-
-function saveConversations() {
-
-  try {
-
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(
-        conversations
-      )
-    );
-
-  } catch (error) {
-
-    console.error(
-      "Could not save conversations:",
-      error
-    );
-  }
-}
-
-
-/* =========================================================
-   CREATE ID
+   ID
 ========================================================= */
 
 function createId() {
@@ -140,49 +116,12 @@ function createId() {
       .toString(36)
       .substring(2, 9)
   );
+
 }
 
 
 /* =========================================================
-   GET CONVERSATION TITLE
-========================================================= */
-
-function createConversationTitle(
-  messages
-) {
-
-  const firstUserMessage =
-    messages.find(
-      message =>
-        message.role === "user"
-    );
-
-  if (
-    !firstUserMessage ||
-    !firstUserMessage.content
-  ) {
-
-    return "محادثة جديدة";
-  }
-
-  let title =
-    firstUserMessage.content
-      .trim()
-      .replace(/\s+/g, " ");
-
-  if (title.length > 35) {
-
-    title =
-      title.substring(0, 35) +
-      "...";
-  }
-
-  return title;
-}
-
-
-/* =========================================================
-   FORMAT DATE
+   DATE
 ========================================================= */
 
 function formatDate(timestamp) {
@@ -190,22 +129,14 @@ function formatDate(timestamp) {
   const date =
     new Date(timestamp);
 
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-
-    return "";
-  }
-
   return date.toLocaleDateString(
     "ar-SA",
     {
       day: "numeric",
-      month: "short",
+      month: "short"
     }
   );
+
 }
 
 
@@ -213,234 +144,253 @@ function formatDate(timestamp) {
    ESCAPE HTML
 ========================================================= */
 
-function escapeHTML(text) {
+function escapeHTML(value) {
 
-  return String(text)
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 
-    .replace(
-      /&/g,
-      "&amp;"
-    )
-
-    .replace(
-      /</g,
-      "&lt;"
-    )
-
-    .replace(
-      />/g,
-      "&gt;"
-    )
-
-    .replace(
-      /"/g,
-      "&quot;"
-    )
-
-    .replace(
-      /'/g,
-      "&#039;"
-    );
 }
 
 
 /* =========================================================
-   MARKDOWN
+   MARKDOWN TO HTML
+   - Fixes <br>
+   - Supports bold
+   - Supports lists
+   - Supports headings
+   - Supports code
 ========================================================= */
 
 function markdownToHTML(text) {
 
   if (!text) {
-
     return "";
   }
+
+
+  /*
+    الذكاء الاصطناعي أحيانًا يرسل
+    <br> أو <br/>
+    لذلك نحولها إلى سطر جديد أولًا.
+  */
+
+  text = String(text)
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/br>/gi, "\n");
+
+
+  /*
+    نحمي النص من HTML الحقيقي
+  */
 
   let html =
     escapeHTML(text);
 
 
-  /* CODE BLOCKS */
+  /* =======================================================
+     CODE BLOCKS
+  ======================================================= */
 
-  html =
-    html.replace(
-      /```([\s\S]*?)```/g,
-      function (_, code) {
+  html = html.replace(
+    /```([\s\S]*?)```/g,
+    function (_, code) {
 
-        return (
-          '<pre class="code-block"><code>' +
-          code.trim() +
-          "</code></pre>"
-        );
-      }
-    );
+      return (
+        '<pre class="code-block"><code>' +
+        code.trim() +
+        "</code></pre>"
+      );
 
-
-  /* INLINE CODE */
-
-  html =
-    html.replace(
-      /`([^`\n]+)`/g,
-      "<code>$1</code>"
-    );
+    }
+  );
 
 
-  /* LINKS */
+  /* =======================================================
+     INLINE CODE
+  ======================================================= */
 
-  html =
-    html.replace(
-      /(https?:\/\/[^\s<]+)/g,
-      '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
-    );
-
-
-  /* HEADINGS */
-
-  html =
-    html.replace(
-      /^### (.+)$/gm,
-      "<h4>$1</h4>"
-    );
-
-  html =
-    html.replace(
-      /^## (.+)$/gm,
-      "<h3>$1</h3>"
-    );
-
-  html =
-    html.replace(
-      /^# (.+)$/gm,
-      "<h2>$1</h2>"
-    );
+  html = html.replace(
+    /`([^`\n]+)`/g,
+    "<code>$1</code>"
+  );
 
 
-  /* BOLD */
+  /* =======================================================
+     LINKS
+  ======================================================= */
 
-  html =
-    html.replace(
-      /\*\*(.+?)\*\*/g,
-      "<strong>$1</strong>"
-    );
+  html = html.replace(
+    /(https?:\/\/[^\s<]+)/g,
+    function (_, url) {
 
+      return (
+        '<a href="' +
+        url +
+        '" target="_blank" rel="noopener noreferrer">' +
+        url +
+        "</a>"
+      );
 
-  /* ITALIC */
-
-  html =
-    html.replace(
-      /(^|[^\*])\*([^*\n]+)\*/g,
-      "$1<em>$2</em>"
-    );
-
-
-  /* LIST */
-
-  html =
-    html.replace(
-      /^(?:[-*]) (.+)$/gm,
-      "<li>$1</li>"
-    );
-
-  html =
-    html.replace(
-      /(<li>.*<\/li>\n?)+/g,
-      function (match) {
-
-        return (
-          "<ul>" +
-          match +
-          "</ul>"
-        );
-      }
-    );
+    }
+  );
 
 
-  /* ORDERED LIST */
+  /* =======================================================
+     HEADINGS
+  ======================================================= */
 
-  html =
-    html.replace(
-      /^\d+\. (.+)$/gm,
-      "<li>$1</li>"
-    );
+  html = html.replace(
+    /^### (.+)$/gm,
+    "<h4>$1</h4>"
+  );
 
+  html = html.replace(
+    /^## (.+)$/gm,
+    "<h3>$1</h3>"
+  );
 
-  /* HORIZONTAL LINE */
-
-  html =
-    html.replace(
-      /^---$/gm,
-      "<hr>"
-    );
-
-
-  /* NEWLINES */
-
-  html =
-    html.replace(
-      /\n/g,
-      "<br>"
-    );
+  html = html.replace(
+    /^# (.+)$/gm,
+    "<h2>$1</h2>"
+  );
 
 
-  /* CLEAN BLOCK BREAKS */
+  /* =======================================================
+     BOLD
+  ======================================================= */
 
-  html =
-    html.replace(
-      /<\/h2><br>/g,
-      "</h2>"
-    );
+  html = html.replace(
+    /\*\*(.+?)\*\*/g,
+    "<strong>$1</strong>"
+  );
 
-  html =
-    html.replace(
-      /<\/h3><br>/g,
-      "</h3>"
-    );
 
-  html =
-    html.replace(
-      /<\/h4><br>/g,
-      "</h4>"
-    );
+  /* =======================================================
+     ITALIC
+  ======================================================= */
 
-  html =
-    html.replace(
-      /<\/pre><br>/g,
-      "</pre>"
-    );
+  html = html.replace(
+    /(^|[^\*])\*([^*\n]+)\*/g,
+    "$1<em>$2</em>"
+  );
 
-  html =
-    html.replace(
-      /<\/ul><br>/g,
-      "</ul>"
-    );
 
-  html =
-    html.replace(
-      /<hr><br>/g,
-      "<hr>"
-    );
+  /* =======================================================
+     BULLET LIST
+  ======================================================= */
+
+  html = html.replace(
+    /^(?:[-*]) (.+)$/gm,
+    "<li>$1</li>"
+  );
+
+
+  html = html.replace(
+    /(<li>.*<\/li>\n?)+/g,
+    function (match) {
+
+      return (
+        "<ul>" +
+        match +
+        "</ul>"
+      );
+
+    }
+  );
+
+
+  /* =======================================================
+     NUMBERED LIST
+  ======================================================= */
+
+  html = html.replace(
+    /^(?:\d+)\. (.+)$/gm,
+    "<li>$1</li>"
+  );
+
+
+  /* =======================================================
+     HORIZONTAL LINE
+  ======================================================= */
+
+  html = html.replace(
+    /^---$/gm,
+    "<hr>"
+  );
+
+
+  /* =======================================================
+     NEW LINES
+  ======================================================= */
+
+  html = html.replace(
+    /\n/g,
+    "<br>"
+  );
+
+
+  /* =======================================================
+     REMOVE UNNECESSARY BR AFTER BLOCK ELEMENTS
+  ======================================================= */
+
+  html = html.replace(
+    /<\/h2><br>/g,
+    "</h2>"
+  );
+
+  html = html.replace(
+    /<\/h3><br>/g,
+    "</h3>"
+  );
+
+  html = html.replace(
+    /<\/h4><br>/g,
+    "</h4>"
+  );
+
+  html = html.replace(
+    /<\/pre><br>/g,
+    "</pre>"
+  );
+
+  html = html.replace(
+    /<\/ul><br>/g,
+    "</ul>"
+  );
+
+  html = html.replace(
+    /<hr><br>/g,
+    "<hr>"
+  );
 
 
   return html;
+
 }
 
 
 /* =========================================================
-   SHOW WELCOME
+   WELCOME SCREEN
 ========================================================= */
 
 function showWelcome() {
 
-  chat.innerHTML = `
+  if (!chat) {
+    return;
+  }
 
+  chat.innerHTML = `
     <section class="welcome">
 
       <div class="welcome-icon">
-
         <img
           src="icon.png"
           alt="Chat AI Pro"
         >
-
       </div>
 
       <h2>
@@ -452,26 +402,200 @@ function showWelcome() {
       </p>
 
     </section>
-
   `;
+
 }
 
 
 /* =========================================================
-   REMOVE WELCOME
+   ADD MESSAGE TO SCREEN
 ========================================================= */
 
-function removeWelcome() {
+function addMessage(
+  text,
+  role,
+  saveToConversation = true
+) {
+
+  if (!chat) {
+    return null;
+  }
+
+
+  /*
+    إذا كانت شاشة الترحيب موجودة
+    نحذفها عند أول رسالة.
+  */
 
   const welcome =
-    document.querySelector(
-      ".welcome"
-    );
+    chat.querySelector(".welcome");
 
   if (welcome) {
-
     welcome.remove();
   }
+
+
+  const wrapper =
+    document.createElement("div");
+
+
+  wrapper.className =
+    "message " +
+    (
+      role === "user"
+        ? "user-message"
+        : "ai-message"
+    );
+
+
+  const bubble =
+    document.createElement("div");
+
+
+  bubble.className =
+    "bubble " +
+    (
+      role === "assistant"
+        ? "ai-bubble"
+        : ""
+    );
+
+
+  if (role === "user") {
+
+    /*
+      رسالة المستخدم تعرض كنص عادي
+      لمنع أي HTML.
+    */
+
+    bubble.textContent =
+      text;
+
+  } else {
+
+    /*
+      رسالة الذكاء الاصطناعي
+      تمر عبر Markdown.
+    */
+
+    bubble.innerHTML =
+      markdownToHTML(text);
+
+  }
+
+
+  wrapper.appendChild(
+    bubble
+  );
+
+
+  chat.appendChild(
+    wrapper
+  );
+
+
+  scrollToBottom();
+
+
+  /*
+    حفظ الرسالة في المحادثة الحالية
+  */
+
+  if (
+    saveToConversation &&
+    currentConversationId
+  ) {
+
+    const conversation =
+      conversations.find(
+        item =>
+          item.id ===
+          currentConversationId
+      );
+
+    if (conversation) {
+
+      conversation.messages.push({
+        role:
+          role === "user"
+            ? "user"
+            : "assistant",
+
+        content:
+          String(text),
+
+        timestamp:
+          Date.now()
+      });
+
+
+      conversation.updatedAt =
+        Date.now();
+
+
+      saveConversations();
+
+      renderConversationList();
+
+    }
+
+  }
+
+
+  return wrapper;
+
+}
+
+
+/* =========================================================
+   LOADING MESSAGE
+========================================================= */
+
+function addLoadingMessage() {
+
+  if (!chat) {
+    return null;
+  }
+
+
+  const wrapper =
+    document.createElement("div");
+
+
+  wrapper.className =
+    "message ai-message";
+
+
+  const bubble =
+    document.createElement("div");
+
+
+  bubble.className =
+    "bubble ai-bubble loading-bubble";
+
+
+  bubble.innerHTML = `
+    <span class="typing-dot"></span>
+    <span class="typing-dot"></span>
+    <span class="typing-dot"></span>
+  `;
+
+
+  wrapper.appendChild(
+    bubble
+  );
+
+
+  chat.appendChild(
+    wrapper
+  );
+
+
+  scrollToBottom();
+
+
+  return wrapper;
+
 }
 
 
@@ -481,154 +605,19 @@ function removeWelcome() {
 
 function scrollToBottom() {
 
-  requestAnimationFrame(() => {
-
-    chat.scrollTop =
-      chat.scrollHeight;
-
-  });
-}
-
-
-/* =========================================================
-   ADD USER MESSAGE
-========================================================= */
-
-function addUserMessage(
-  text
-) {
-
-  removeWelcome();
-
-  const message =
-    document.createElement(
-      "div"
-    );
-
-  message.className =
-    "message user-message";
-
-  const bubble =
-    document.createElement(
-      "div"
-    );
-
-  bubble.className =
-    "bubble";
-
-  bubble.textContent =
-    text;
-
-  message.appendChild(
-    bubble
-  );
-
-  chat.appendChild(
-    message
-  );
-
-  scrollToBottom();
-}
-
-
-/* =========================================================
-   ADD AI MESSAGE
-========================================================= */
-
-function addAIMessage(
-  text
-) {
-
-  removeWelcome();
-
-  const message =
-    document.createElement(
-      "div"
-    );
-
-  message.className =
-    "message ai-message";
-
-  const bubble =
-    document.createElement(
-      "div"
-    );
-
-  bubble.className =
-    "bubble ai-bubble";
-
-  bubble.innerHTML =
-    markdownToHTML(text);
-
-  message.appendChild(
-    bubble
-  );
-
-  chat.appendChild(
-    message
-  );
-
-  scrollToBottom();
-
-  return message;
-}
-
-
-/* =========================================================
-   LOADING
-========================================================= */
-
-function addLoadingMessage() {
-
-  removeWelcome();
-
-  const message =
-    document.createElement(
-      "div"
-    );
-
-  message.className =
-    "message ai-message loading-message";
-
-  message.innerHTML = `
-
-    <div class="bubble ai-bubble loading-bubble">
-
-      <span class="typing-dot"></span>
-
-      <span class="typing-dot"></span>
-
-      <span class="typing-dot"></span>
-
-    </div>
-
-  `;
-
-  chat.appendChild(
-    message
-  );
-
-  scrollToBottom();
-
-  return message;
-}
-
-
-/* =========================================================
-   REMOVE LOADING
-========================================================= */
-
-function removeLoadingMessage(
-  message
-) {
-
-  if (
-    message &&
-    message.parentNode
-  ) {
-
-    message.remove();
+  if (!chat) {
+    return;
   }
+
+  requestAnimationFrame(
+    () => {
+
+      chat.scrollTop =
+        chat.scrollHeight;
+
+    }
+  );
+
 }
 
 
@@ -638,127 +627,68 @@ function removeLoadingMessage(
 
 function createNewConversation() {
 
-  currentConversationId =
+  const id =
     createId();
 
-  history = [];
 
-  showWelcome();
-
-  renderConversationList();
-
-  closeMobileSidebar();
-
-  messageInput.value = "";
-
-  autoResizeTextarea();
-
-  messageInput.focus();
-}
+  const now =
+    Date.now();
 
 
-/* =========================================================
-   SAVE CURRENT CONVERSATION
-========================================================= */
+  const conversation = {
 
-function saveCurrentConversation() {
+    id,
 
-  if (
-    !currentConversationId
-  ) {
+    title:
+      "محادثة جديدة",
 
-    return;
-  }
+    createdAt:
+      now,
 
-  if (
-    !history ||
-    history.length === 0
-  ) {
+    updatedAt:
+      now,
 
-    return;
-  }
+    messages:
+      []
+
+  };
 
 
-  const existingIndex =
-    conversations.findIndex(
-      conversation =>
-        conversation.id ===
-        currentConversationId
-    );
-
-
-  const title =
-    createConversationTitle(
-      history
-    );
-
-
-  if (
-    existingIndex === -1
-  ) {
-
-    conversations.unshift({
-
-      id:
-        currentConversationId,
-
-      title:
-        title,
-
-      messages:
-        [...history],
-
-      createdAt:
-        Date.now(),
-
-      updatedAt:
-        Date.now(),
-
-    });
-
-  } else {
-
-    conversations[
-      existingIndex
-    ].messages =
-      [...history];
-
-    conversations[
-      existingIndex
-    ].title =
-      title;
-
-    conversations[
-      existingIndex
-    ].updatedAt =
-      Date.now();
-  }
-
-
-  /*
-     الأحدث أولًا
-  */
-
-  conversations.sort(
-    (a, b) =>
-      b.updatedAt -
-      a.updatedAt
+  conversations.unshift(
+    conversation
   );
+
+
+  currentConversationId =
+    id;
 
 
   saveConversations();
 
   renderConversationList();
+
+  showWelcome();
+
+  closeSidebarMobile();
+
+  if (messageInput) {
+
+    messageInput.value = "";
+
+    autoResizeTextarea();
+
+    messageInput.focus();
+
+  }
+
 }
 
 
 /* =========================================================
-   OPEN CONVERSATION
+   LOAD CONVERSATION
 ========================================================= */
 
-function openConversation(
-  id
-) {
+function loadConversation(id) {
 
   const conversation =
     conversations.find(
@@ -766,78 +696,54 @@ function openConversation(
         item.id === id
     );
 
-  if (!conversation) {
 
+  if (!conversation) {
     return;
   }
 
 
   currentConversationId =
-    conversation.id;
-
-  history =
-    Array.isArray(
-      conversation.messages
-    )
-      ? [...conversation.messages]
-      : [];
+    id;
 
 
-  renderConversation();
+  if (!chat) {
+    return;
+  }
 
-  renderConversationList();
-
-  closeMobileSidebar();
-
-  messageInput.focus();
-}
-
-
-/* =========================================================
-   RENDER CONVERSATION
-========================================================= */
-
-function renderConversation() {
 
   chat.innerHTML = "";
 
 
   if (
-    !history ||
-    history.length === 0
+    !conversation.messages ||
+    conversation.messages.length === 0
   ) {
 
     showWelcome();
 
-    return;
+  } else {
+
+    conversation.messages.forEach(
+      message => {
+
+        addMessage(
+          message.content,
+          message.role,
+          false
+        );
+
+      }
+    );
+
   }
 
 
-  for (
-    const message of history
-  ) {
+  renderConversationList();
 
-    if (
-      message.role === "user"
-    ) {
-
-      addUserMessage(
-        message.content
-      );
-
-    } else if (
-      message.role ===
-      "assistant"
-    ) {
-
-      addAIMessage(
-        message.content
-      );
-    }
-  }
-
+  closeSidebarMobile();
 
   scrollToBottom();
+
 }
 
 
@@ -846,54 +752,70 @@ function renderConversation() {
 ========================================================= */
 
 function deleteConversation(
-  id
+  id,
+  event
 ) {
 
-  const conversation =
-    conversations.find(
+  if (event) {
+    event.stopPropagation();
+  }
+
+
+  const index =
+    conversations.findIndex(
       item =>
         item.id === id
     );
 
-  if (!conversation) {
 
+  if (index === -1) {
     return;
   }
 
 
-  const confirmed =
-    window.confirm(
-      `هل تريد حذف المحادثة "${conversation.title}"؟`
-    );
-
-
-  if (!confirmed) {
-
-    return;
-  }
-
-
-  conversations =
-    conversations.filter(
-      item =>
-        item.id !== id
-    );
+  conversations.splice(
+    index,
+    1
+  );
 
 
   saveConversations();
 
 
+  /*
+    إذا حذفنا المحادثة الحالية
+  */
+
   if (
-    currentConversationId ===
-    id
+    currentConversationId === id
   ) {
 
-    createNewConversation();
+    currentConversationId =
+      null;
+
+
+    if (
+      conversations.length > 0
+    ) {
+
+      loadConversation(
+        conversations[0].id
+      );
+
+    } else {
+
+      showWelcome();
+
+      renderConversationList();
+
+    }
 
   } else {
 
     renderConversationList();
+
   }
+
 }
 
 
@@ -902,8 +824,14 @@ function deleteConversation(
 ========================================================= */
 
 function renameConversation(
-  id
+  id,
+  event
 ) {
+
+  if (event) {
+    event.stopPropagation();
+  }
+
 
   const conversation =
     conversations.find(
@@ -911,14 +839,14 @@ function renameConversation(
         item.id === id
     );
 
-  if (!conversation) {
 
+  if (!conversation) {
     return;
   }
 
 
   const newTitle =
-    window.prompt(
+    prompt(
       "اكتب اسم المحادثة الجديد:",
       conversation.title
     );
@@ -927,7 +855,6 @@ function renameConversation(
   if (
     newTitle === null
   ) {
-
     return;
   }
 
@@ -937,7 +864,6 @@ function renameConversation(
 
 
   if (!title) {
-
     return;
   }
 
@@ -953,42 +879,72 @@ function renameConversation(
   saveConversations();
 
   renderConversationList();
+
 }
 
 
 /* =========================================================
-   RENDER HISTORY
+   GET CONVERSATION TITLE
+========================================================= */
+
+function getConversationTitle(
+  conversation
+) {
+
+  if (
+    conversation.title &&
+    conversation.title !== "محادثة جديدة"
+  ) {
+
+    return conversation.title;
+
+  }
+
+
+  const firstUserMessage =
+    conversation.messages?.find(
+      message =>
+        message.role === "user"
+    );
+
+
+  if (
+    firstUserMessage &&
+    firstUserMessage.content
+  ) {
+
+    let title =
+      firstUserMessage.content
+        .replace(/\s+/g, " ")
+        .trim();
+
+
+    if (title.length > 32) {
+
+      title =
+        title.substring(0, 32) +
+        "...";
+
+    }
+
+
+    return title;
+
+  }
+
+
+  return "محادثة جديدة";
+
+}
+
+
+/* =========================================================
+   RENDER SIDEBAR HISTORY
 ========================================================= */
 
 function renderConversationList() {
 
-  if (
-    !conversationList
-  ) {
-
-    return;
-  }
-
-
-  if (
-    conversations.length === 0
-  ) {
-
-    conversationList.innerHTML = `
-
-      <div class="empty-history">
-
-        لا توجد محادثات سابقة بعد.
-
-        <br>
-
-        ابدأ محادثة جديدة
-        وستظهر هنا.
-
-      </div>
-
-    `;
-
+  if (!conversationList) {
     return;
   }
 
@@ -996,190 +952,214 @@ function renderConversationList() {
   conversationList.innerHTML = "";
 
 
-  for (
-    const conversation of
-      conversations
+  if (
+    conversations.length === 0
   ) {
 
-    const item =
-      document.createElement(
-        "div"
-      );
+    conversationList.innerHTML = `
+      <div class="empty-history">
+        لا توجد محادثات سابقة بعد.<br>
+        ابدأ محادثة جديدة وستظهر هنا.
+      </div>
+    `;
 
-    item.className =
-      "conversation-item";
+    return;
 
-
-    if (
-      conversation.id ===
-      currentConversationId
-    ) {
-
-      item.classList.add(
-        "active"
-      );
-    }
-
-
-    const main =
-      document.createElement(
-        "div"
-      );
-
-    main.className =
-      "conversation-main";
-
-
-    const name =
-      document.createElement(
-        "div"
-      );
-
-    name.className =
-      "conversation-name";
-
-    name.textContent =
-      conversation.title;
-
-
-    const date =
-      document.createElement(
-        "div"
-      );
-
-    date.className =
-      "conversation-date";
-
-    date.textContent =
-      formatDate(
-        conversation.updatedAt
-      );
-
-
-    main.appendChild(
-      name
-    );
-
-    main.appendChild(
-      date
-    );
-
-
-    /*
-       الضغط على اسم المحادثة
-    */
-
-    main.addEventListener(
-      "click",
-      () => {
-
-        openConversation(
-          conversation.id
-        );
-
-      }
-    );
-
-
-    /* ACTIONS */
-
-    const actions =
-      document.createElement(
-        "div"
-      );
-
-    actions.className =
-      "conversation-actions";
-
-
-    /* RENAME */
-
-    const rename =
-      document.createElement(
-        "button"
-      );
-
-    rename.type =
-      "button";
-
-    rename.className =
-      "conversation-action";
-
-    rename.title =
-      "إعادة تسمية";
-
-    rename.textContent =
-      "✎";
-
-
-    rename.addEventListener(
-      "click",
-      event => {
-
-        event.stopPropagation();
-
-        renameConversation(
-          conversation.id
-        );
-      }
-    );
-
-
-    /* DELETE */
-
-    const deleteBtn =
-      document.createElement(
-        "button"
-      );
-
-    deleteBtn.type =
-      "button";
-
-    deleteBtn.className =
-      "conversation-action delete";
-
-    deleteBtn.title =
-      "حذف";
-
-    deleteBtn.textContent =
-      "🗑";
-
-
-    deleteBtn.addEventListener(
-      "click",
-      event => {
-
-        event.stopPropagation();
-
-        deleteConversation(
-          conversation.id
-        );
-      }
-    );
-
-
-    actions.appendChild(
-      rename
-    );
-
-    actions.appendChild(
-      deleteBtn
-    );
-
-
-    item.appendChild(
-      main
-    );
-
-    item.appendChild(
-      actions
-    );
-
-
-    conversationList.appendChild(
-      item
-    );
   }
+
+
+  /*
+    الأحدث أولًا
+  */
+
+  const sorted =
+    [...conversations].sort(
+      (a, b) =>
+        (b.updatedAt || 0) -
+        (a.updatedAt || 0)
+    );
+
+
+  sorted.forEach(
+    conversation => {
+
+      const item =
+        document.createElement("div");
+
+
+      item.className =
+        "conversation-item";
+
+
+      if (
+        conversation.id ===
+        currentConversationId
+      ) {
+
+        item.classList.add(
+          "active"
+        );
+
+      }
+
+
+      const main =
+        document.createElement("div");
+
+
+      main.className =
+        "conversation-main";
+
+
+      const name =
+        document.createElement("div");
+
+
+      name.className =
+        "conversation-name";
+
+
+      name.textContent =
+        getConversationTitle(
+          conversation
+        );
+
+
+      const date =
+        document.createElement("div");
+
+
+      date.className =
+        "conversation-date";
+
+
+      date.textContent =
+        formatDate(
+          conversation.updatedAt ||
+          conversation.createdAt
+        );
+
+
+      main.appendChild(
+        name
+      );
+
+      main.appendChild(
+        date
+      );
+
+
+      const actions =
+        document.createElement("div");
+
+
+      actions.className =
+        "conversation-actions";
+
+
+      const renameBtn =
+        document.createElement("button");
+
+
+      renameBtn.className =
+        "conversation-action";
+
+
+      renameBtn.type =
+        "button";
+
+
+      renameBtn.title =
+        "إعادة تسمية";
+
+
+      renameBtn.textContent =
+        "✎";
+
+
+      renameBtn.addEventListener(
+        "click",
+        event => {
+
+          renameConversation(
+            conversation.id,
+            event
+          );
+
+        }
+      );
+
+
+      const deleteBtn =
+        document.createElement("button");
+
+
+      deleteBtn.className =
+        "conversation-action delete";
+
+
+      deleteBtn.type =
+        "button";
+
+
+      deleteBtn.title =
+        "حذف";
+
+
+      deleteBtn.textContent =
+        "×";
+
+
+      deleteBtn.addEventListener(
+        "click",
+        event => {
+
+          deleteConversation(
+            conversation.id,
+            event
+          );
+
+        }
+      );
+
+
+      actions.appendChild(
+        renameBtn
+      );
+
+      actions.appendChild(
+        deleteBtn
+      );
+
+
+      item.appendChild(
+        main
+      );
+
+      item.appendChild(
+        actions
+      );
+
+
+      item.addEventListener(
+        "click",
+        () => {
+
+          loadConversation(
+            conversation.id
+          );
+
+        }
+      );
+
+
+      conversationList.appendChild(
+        item
+      );
+
+    }
+  );
+
 }
 
 
@@ -1189,80 +1169,152 @@ function renderConversationList() {
 
 async function sendMessage() {
 
+  if (isSending) {
+    return;
+  }
+
+
+  if (!messageInput) {
+    return;
+  }
+
+
   const text =
     messageInput.value.trim();
 
 
   if (!text) {
-
-    return;
-  }
-
-
-  if (isSending) {
-
     return;
   }
 
 
   /*
-     إذا لم توجد محادثة
-     ننشئ واحدة
+    إذا لم توجد محادثة
+    ننشئ واحدة تلقائيًا.
   */
 
-  if (
-    !currentConversationId
-  ) {
+  if (!currentConversationId) {
 
-    currentConversationId =
-      createId();
+    createNewConversation();
+
+  }
+
+
+  /*
+    تأكيد وجود المحادثة
+  */
+
+  let conversation =
+    conversations.find(
+      item =>
+        item.id ===
+        currentConversationId
+    );
+
+
+  if (!conversation) {
+
+    createNewConversation();
+
+
+    conversation =
+      conversations.find(
+        item =>
+          item.id ===
+          currentConversationId
+      );
+
+  }
+
+
+  if (!conversation) {
+    return;
   }
 
 
   isSending = true;
 
 
-  /* USER */
-
-  addUserMessage(text);
-
-
-  history.push({
-
-    role: "user",
-
-    content: text,
-
-  });
+  if (sendBtn) {
+    sendBtn.disabled = true;
+  }
 
 
   /*
-     حفظ الرسالة فورًا
+    إضافة رسالة المستخدم
   */
 
-  saveCurrentConversation();
+  addMessage(
+    text,
+    "user",
+    true
+  );
 
 
-  /* CLEAR INPUT */
+  /*
+    تحديث اسم المحادثة
+    من أول رسالة.
+  */
+
+  if (
+    conversation.title ===
+    "محادثة جديدة"
+  ) {
+
+    conversation.title =
+      getConversationTitle(
+        conversation
+      );
+
+  }
+
+
+  conversation.updatedAt =
+    Date.now();
+
+
+  saveConversations();
+
+  renderConversationList();
+
+
+  /*
+    تنظيف مربع الكتابة
+  */
 
   messageInput.value = "";
 
   autoResizeTextarea();
 
 
-  /* BUTTON */
+  /*
+    Loading
+  */
 
-  sendBtn.disabled =
-    true;
-
-
-  /* LOADING */
-
-  const loadingMessage =
+  const loading =
     addLoadingMessage();
 
 
   try {
+
+    /*
+      نرسل سجل المحادثة كاملًا
+      إلى السيرفر.
+    */
+
+    const history =
+      conversation.messages.map(
+        message => ({
+
+          role:
+            message.role,
+
+          content:
+            message.content
+
+        })
+      );
+
 
     const response =
       await fetch(
@@ -1273,326 +1325,497 @@ async function sendMessage() {
 
           headers: {
             "Content-Type":
-              "application/json",
+              "application/json"
           },
 
           body:
             JSON.stringify({
               messages:
-                history,
-            }),
+                history
+            })
 
         }
       );
 
 
-    const data =
-      await response
-        .json()
-        .catch(
-          () => ({})
-        );
+    /*
+      محاولة قراءة JSON
+    */
+
+    let data = null;
 
 
-    if (
-      !response.ok
-    ) {
+    try {
 
-      throw new Error(
-        data?.error ||
-        `HTTP ${response.status}`
-      );
+      data =
+        await response.json();
+
+    } catch (jsonError) {
+
+      data = null;
+
     }
 
 
     /*
-       server.js الحالي
-       يرجع answer
+      إذا كان السيرفر أعاد خطأ
     */
 
-    const answer =
-      typeof data?.answer ===
-      "string"
+    if (!response.ok) {
 
-        ? data.answer
-
-        : typeof data?.reply ===
-          "string"
-
-        ? data.reply
-
-        : "";
-
-
-    removeLoadingMessage(
-      loadingMessage
-    );
-
-
-    if (
-      !answer.trim()
-    ) {
+      const serverMessage =
+        data?.error ||
+        data?.message ||
+        "حدث خطأ في الخادم.";
 
       throw new Error(
-        "السيرفر أعاد إجابة فارغة."
+        serverMessage
       );
+
     }
 
 
-    /* AI */
+    /*
+      استخراج الإجابة
+      مهما كان شكلها البسيط.
+    */
 
-    addAIMessage(
-      answer
+    let answer =
+      data?.reply ||
+      data?.response ||
+      data?.message ||
+      data?.text ||
+      data?.content;
+
+
+    /*
+      بعض السيرفرات قد ترجع:
+      { answer: "..." }
+    */
+
+    if (!answer) {
+
+      answer =
+        data?.answer;
+
+    }
+
+
+    /*
+      حماية إضافية إذا رجعت
+      البيانات بشكل مختلف.
+    */
+
+    if (
+      typeof answer !==
+      "string"
+    ) {
+
+      answer =
+        String(
+          answer || ""
+        );
+
+    }
+
+
+    answer =
+      answer.trim();
+
+
+    if (!answer) {
+
+      throw new Error(
+        "لم تصل إجابة من الذكاء الاصطناعي."
+      );
+
+    }
+
+
+    /*
+      إزالة Loading
+    */
+
+    if (loading) {
+      loading.remove();
+    }
+
+
+    /*
+      إضافة الإجابة
+    */
+
+    addMessage(
+      answer,
+      "assistant",
+      true
     );
-
-
-    /* SAVE */
-
-    history.push({
-
-      role:
-        "assistant",
-
-      content:
-        answer,
-
-    });
-
-
-    saveCurrentConversation();
 
 
   } catch (error) {
 
     console.error(
-      "Chat error:",
+      "Chat API Error:",
       error
     );
 
 
-    removeLoadingMessage(
-      loadingMessage
-    );
+    /*
+      إزالة Loading
+    */
+
+    if (loading) {
+      loading.remove();
+    }
 
 
-    const errorText =
-      "حدث خطأ: تعذر الحصول على إجابة حاليًا. حاول مرة أخرى بعد قليل.";
+    /*
+      رسالة الخطأ للمستخدم
+    */
 
-
-    addAIMessage(
-      errorText
+    addMessage(
+      "حدث خطأ أثناء الحصول على الإجابة. حاول مرة أخرى بعد قليل.",
+      "assistant",
+      false
     );
 
   } finally {
 
     isSending = false;
 
-    sendBtn.disabled =
-      false;
 
-    messageInput.focus();
+    if (sendBtn) {
+      sendBtn.disabled = false;
+    }
 
-    scrollToBottom();
+
+    if (messageInput) {
+      messageInput.focus();
+    }
+
   }
+
 }
 
 
 /* =========================================================
-   CLEAR / NEW CHAT
-========================================================= */
-
-function startNewChat() {
-
-  if (
-    history.length > 0
-  ) {
-
-    saveCurrentConversation();
-  }
-
-
-  currentConversationId =
-    createId();
-
-  history = [];
-
-
-  showWelcome();
-
-  renderConversationList();
-
-  closeMobileSidebar();
-
-
-  messageInput.value = "";
-
-  autoResizeTextarea();
-
-  messageInput.focus();
-}
-
-
-/* =========================================================
-   TEXTAREA RESIZE
+   TEXTAREA AUTO RESIZE
 ========================================================= */
 
 function autoResizeTextarea() {
+
+  if (!messageInput) {
+    return;
+  }
+
 
   messageInput.style.height =
     "auto";
 
 
-  const maxHeight = 150;
+  const maxHeight =
+    150;
 
 
-  messageInput.style.height =
+  const newHeight =
     Math.min(
       messageInput.scrollHeight,
       maxHeight
-    ) + "px";
+    );
+
+
+  messageInput.style.height =
+    newHeight + "px";
+
 }
 
 
 /* =========================================================
-   SIDEBAR
+   CLEAR CURRENT CHAT
 ========================================================= */
 
-function openMobileSidebar() {
+function clearCurrentChat() {
+
+  /*
+    إذا كانت هناك محادثة حالية
+    نحذفها من السجل أيضًا.
+  */
+
+  if (currentConversationId) {
+
+    conversations =
+      conversations.filter(
+        conversation =>
+          conversation.id !==
+          currentConversationId
+      );
+
+  }
+
+
+  currentConversationId =
+    null;
+
+
+  saveConversations();
+
+  renderConversationList();
+
+  showWelcome();
+
+
+  if (messageInput) {
+
+    messageInput.value = "";
+
+    autoResizeTextarea();
+
+    messageInput.focus();
+
+  }
+
+}
+
+
+/* =========================================================
+   MOBILE SIDEBAR
+========================================================= */
+
+function openSidebarMobile() {
+
+  if (!sidebar) {
+    return;
+  }
 
   sidebar.classList.add(
     "open"
   );
 
-  sidebarOverlay.classList.add(
-    "active"
-  );
+
+  if (sidebarOverlay) {
+
+    sidebarOverlay.classList.add(
+      "active"
+    );
+
+  }
+
 }
 
 
-function closeMobileSidebar() {
+function closeSidebarMobile() {
+
+  if (!sidebar) {
+    return;
+  }
 
   sidebar.classList.remove(
     "open"
   );
 
-  sidebarOverlay.classList.remove(
-    "active"
-  );
+
+  if (sidebarOverlay) {
+
+    sidebarOverlay.classList.remove(
+      "active"
+    );
+
+  }
+
 }
 
 
 /* =========================================================
-   EVENTS
+   EVENT LISTENERS
 ========================================================= */
 
 
-/* SEND */
+/*
+  إرسال بالزر
+*/
 
-sendBtn.addEventListener(
-  "click",
-  sendMessage
-);
+if (sendBtn) {
 
+  sendBtn.addEventListener(
+    "click",
+    sendMessage
+  );
 
-/* NEW CHAT SIDEBAR */
-
-newChatBtn.addEventListener(
-  "click",
-  startNewChat
-);
+}
 
 
-/* NEW CHAT TOP */
+/*
+  Enter = إرسال
+  Shift + Enter = سطر جديد
+*/
 
-clearBtn.addEventListener(
-  "click",
-  startNewChat
-);
+if (messageInput) {
 
+  messageInput.addEventListener(
+    "keydown",
+    event => {
 
-/* ENTER */
+      if (
+        event.key === "Enter" &&
+        !event.shiftKey
+      ) {
 
-messageInput.addEventListener(
-  "keydown",
-  event => {
+        event.preventDefault();
 
-    if (
-      event.key ===
-        "Enter" &&
-      !event.shiftKey
-    ) {
+        sendMessage();
 
-      event.preventDefault();
+      }
 
-      sendMessage();
     }
-  }
-);
+  );
 
 
-/* INPUT */
+  messageInput.addEventListener(
+    "input",
+    autoResizeTextarea
+  );
 
-messageInput.addEventListener(
-  "input",
-  autoResizeTextarea
-);
-
-
-/* MENU */
-
-sidebarToggle.addEventListener(
-  "click",
-  () => {
-
-    if (
-      sidebar.classList.contains(
-        "open"
-      )
-    ) {
-
-      closeMobileSidebar();
-
-    } else {
-
-      openMobileSidebar();
-    }
-  }
-);
+}
 
 
-/* OVERLAY */
+/*
+  محادثة جديدة
+*/
 
-sidebarOverlay.addEventListener(
-  "click",
-  closeMobileSidebar
-);
+if (newChatBtn) {
+
+  newChatBtn.addEventListener(
+    "click",
+    createNewConversation
+  );
+
+}
+
+
+/*
+  زر المحادثة الجديدة الموجود
+  في أعلى الصفحة
+*/
+
+if (clearBtn) {
+
+  clearBtn.addEventListener(
+    "click",
+    createNewConversation
+  );
+
+}
+
+
+/*
+  فتح القائمة في الجوال
+*/
+
+if (menuBtn) {
+
+  menuBtn.addEventListener(
+    "click",
+    openSidebarMobile
+  );
+
+}
+
+
+/*
+  إغلاق القائمة
+*/
+
+if (sidebarOverlay) {
+
+  sidebarOverlay.addEventListener(
+    "click",
+    closeSidebarMobile
+  );
+
+}
 
 
 /* =========================================================
-   INITIALIZE
+   INITIALIZATION
 ========================================================= */
 
-loadConversations();
+function initializeApp() {
 
-renderConversationList();
+  /*
+    تحميل المحادثات
+  */
 
-currentConversationId =
-  createId();
-
-history = [];
-
-showWelcome();
-
-autoResizeTextarea();
-
-messageInput.focus();
+  loadConversations();
 
 
-console.log(
-  "Chat AI Pro loaded successfully."
-);
+  /*
+    عرض سجل المحادثات
+  */
 
-console.log(
-  "Conversation history loaded:",
-  conversations.length
-);
+  renderConversationList();
+
+
+  /*
+    إذا كان هناك محادثات محفوظة
+    افتح آخر محادثة.
+  */
+
+  if (
+    conversations.length > 0
+  ) {
+
+    const latest =
+      [...conversations].sort(
+        (a, b) =>
+          (b.updatedAt || 0) -
+          (a.updatedAt || 0)
+      )[0];
+
+
+    if (latest) {
+
+      loadConversation(
+        latest.id
+      );
+
+    }
+
+  } else {
+
+    /*
+      لا توجد محادثات
+    */
+
+    showWelcome();
+
+  }
+
+
+  /*
+    ضبط مربع الكتابة
+  */
+
+  autoResizeTextarea();
+
+}
+
+
+/* =========================================================
+   START
+========================================================= */
+
+if (
+  document.readyState ===
+  "loading"
+) {
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    initializeApp
+  );
+
+} else {
+
+  initializeApp();
+
+}
