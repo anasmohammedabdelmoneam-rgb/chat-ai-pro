@@ -22,40 +22,100 @@ const OPENROUTER_URL =
   "https://openrouter.ai/api/v1/chat/completions";
 
 const GEMINI_MODEL = "gemini-3.8-flash";
-
 const GROQ_MODEL = "llama-3.3-70b-versatile";
-
 const OPENROUTER_MODEL = "openrouter/free";
 
+/*
+==================================================
+ ANAS AI - SYSTEM INSTRUCTION
+==================================================
+*/
 
-/* =========================================================
-   أدوات مساعدة
-========================================================= */
+const SYSTEM_PROMPT = `
+أنت Anas AI، مساعد ذكاء اصطناعي ذكي ودقيق.
 
-function sleep(ms) {
-  return new Promise(function (resolve) {
-    setTimeout(resolve, ms);
-  });
-}
+القواعد المهمة جدًا:
 
+1. افهم سؤال المستخدم كما كتبه بالضبط.
+2. لا تستبدل كلمة المستخدم بكلمة أخرى مشابهة.
+3. لا تفترض أن المستخدم يقصد كلمة مختلفة عن التي كتبها.
+4. إذا كان السؤال باللغة العربية، فأجب باللغة العربية، إلا إذا طلب المستخدم لغة أخرى.
+5. إذا سأل المستخدم عن ترجمة كلمة أو جملة، أعطه الترجمة المطلوبة مباشرة.
+6. في أسئلة الترجمة، لا تخترع معنى آخر للكلمة.
+7. إذا كان السؤال بسيطًا، اجعل الإجابة بسيطة ومباشرة.
+8. لا تكتب شرحًا طويلًا إذا كان المستخدم يريد إجابة قصيرة.
+9. إذا كان هناك أكثر من ترجمة صحيحة، اذكر الأكثر شيوعًا أولًا.
+10. لا تكرر سؤال المستخدم بلا داعٍ.
+11. إذا لم تفهم السؤال فعلًا، قل إنك لم تفهمه واطلب منه توضيحًا بدل التخمين.
+12. لا تغيّر موضوع السؤال.
+13. لا تخلط بين الكلمات العربية المتشابهة.
+14. حافظ على سياق المحادثة السابقة.
+15. كن طبيعيًا ومفيدًا وكأنك مساعد شخصي.
+
+مثال مهم:
+
+المستخدم:
+"كيف أقول كلمة الحب باللغة الإنجليزية؟"
+
+الإجابة الصحيحة:
+"الحب = Love ❤️"
+
+وليس:
+"عب تعني..."
+
+مثال آخر:
+
+المستخدم:
+"ما معنى كلمة car؟"
+
+الإجابة:
+"car = سيارة."
+
+مثال آخر:
+
+المستخدم:
+"كيف حالك؟"
+
+الإجابة:
+"أنا بخير، شكرًا! كيف يمكنني مساعدتك؟"
+
+لا تغيّر معنى سؤال المستخدم ولا تخمّن كلمة أخرى.
+`;
+
+/*
+==================================================
+ تحويل رسائل الواجهة إلى رسائل مفهومة للموديلات
+==================================================
+*/
 
 function getMessages(messages) {
-  return messages.map(function (message) {
-    return {
-      role:
-        message.role === "assistant"
-          ? "assistant"
-          : "user",
+  return messages
+    .filter(function (message) {
+      return (
+        message &&
+        (message.role === "user" ||
+          message.role === "assistant")
+      );
+    })
+    .map(function (message) {
+      return {
+        role:
+          message.role === "assistant"
+            ? "assistant"
+            : "user",
 
-      content: String(message.content || "")
-    };
-  });
+        content: String(
+          message.content || ""
+        )
+      };
+    });
 }
 
-
-/* =========================================================
-   GEMINI
-========================================================= */
+/*
+==================================================
+ GEMINI
+==================================================
+*/
 
 async function callGemini(messages) {
   if (!GEMINI_API_KEY) {
@@ -72,34 +132,45 @@ async function callGemini(messages) {
       content: [
         {
           type: "text",
-          text: String(message.content || "")
+          text: String(
+            message.content || ""
+          )
         }
       ]
     };
   });
 
+  const response = await fetch(
+    GEMINI_URL,
+    {
+      method: "POST",
 
-  const response = await fetch(GEMINI_URL, {
-    method: "POST",
+      headers: {
+        "Content-Type":
+          "application/json",
 
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": GEMINI_API_KEY
-    },
+        "x-goog-api-key":
+          GEMINI_API_KEY
+      },
 
-    body: JSON.stringify({
-      model: GEMINI_MODEL,
-      input: input,
-      store: false
-    })
-  });
+      body: JSON.stringify({
+        model: GEMINI_MODEL,
 
+        system_instruction:
+          SYSTEM_PROMPT,
+
+        input: input,
+
+        store: false
+      })
+    }
+  );
 
   const data = await response.json();
 
-
   if (!response.ok) {
-    const error = new Error("GEMINI_FAILED");
+    const error =
+      new Error("GEMINI_FAILED");
 
     error.status = response.status;
     error.data = data;
@@ -107,36 +178,54 @@ async function callGemini(messages) {
     throw error;
   }
 
+  let reply =
+    data.output_text || "";
 
-  let reply = data.output_text || "";
+  /*
+  محاولة استخراج النص إذا لم يكن
+  output_text موجودًا
+  */
 
-
-  if (!reply && Array.isArray(data.steps)) {
-    for (let i = data.steps.length - 1; i >= 0; i--) {
+  if (
+    !reply &&
+    Array.isArray(data.steps)
+  ) {
+    for (
+      let i = data.steps.length - 1;
+      i >= 0;
+      i--
+    ) {
       const step = data.steps[i];
 
-      if (Array.isArray(step.content)) {
-        const textParts = step.content
-          .filter(function (part) {
-            return part.type === "text";
-          })
-          .map(function (part) {
-            return part.text || "";
-          });
+      if (
+        Array.isArray(step.content)
+      ) {
+        const textParts =
+          step.content
+            .filter(function (part) {
+              return (
+                part.type === "text"
+              );
+            })
+            .map(function (part) {
+              return part.text || "";
+            });
 
         if (textParts.length) {
-          reply = textParts.join("");
+          reply =
+            textParts.join("");
+
           break;
         }
       }
     }
   }
 
-
   if (!reply) {
-    throw new Error("GEMINI_EMPTY_RESPONSE");
+    throw new Error(
+      "GEMINI_EMPTY_RESPONSE"
+    );
   }
-
 
   return {
     reply: reply,
@@ -144,47 +233,64 @@ async function callGemini(messages) {
   };
 }
 
-
-/* =========================================================
-   GROQ
-========================================================= */
+/*
+==================================================
+ GROQ
+==================================================
+*/
 
 async function callGroq(messages) {
   if (!GROQ_API_KEY) {
-    throw new Error("GROQ_API_KEY_MISSING");
+    throw new Error(
+      "GROQ_API_KEY_MISSING"
+    );
   }
 
+  const groqMessages = [
+    {
+      role: "system",
+      content: SYSTEM_PROMPT
+    }
+  ].concat(getMessages(messages));
 
-  const response = await fetch(GROQ_URL, {
-    method: "POST",
+  const response = await fetch(
+    GROQ_URL,
+    {
+      method: "POST",
 
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization":
-        "Bearer " + GROQ_API_KEY
-    },
+      headers: {
+        "Content-Type":
+          "application/json",
 
-    body: JSON.stringify({
-      model: GROQ_MODEL,
-      messages: getMessages(messages),
-      temperature: 0.7,
-      max_completion_tokens: 2048
-    })
-  });
+        "Authorization":
+          "Bearer " +
+          GROQ_API_KEY
+      },
 
+      body: JSON.stringify({
+        model: GROQ_MODEL,
 
-  const data = await response.json();
+        messages: groqMessages,
 
+        temperature: 0.2,
+
+        max_completion_tokens: 2048
+      })
+    }
+  );
+
+  const data =
+    await response.json();
 
   if (!response.ok) {
-    const error = new Error("GROQ_FAILED");
+    const error =
+      new Error("GROQ_FAILED");
 
     error.status = response.status;
     error.data = data;
 
     throw error;
   }
-
 
   const reply =
     data &&
@@ -193,11 +299,11 @@ async function callGroq(messages) {
     data.choices[0].message &&
     data.choices[0].message.content;
 
-
   if (!reply) {
-    throw new Error("GROQ_EMPTY_RESPONSE");
+    throw new Error(
+      "GROQ_EMPTY_RESPONSE"
+    );
   }
-
 
   return {
     reply: reply,
@@ -205,58 +311,74 @@ async function callGroq(messages) {
   };
 }
 
-
-/* =========================================================
-   OPENROUTER
-========================================================= */
+/*
+==================================================
+ OPENROUTER
+==================================================
+*/
 
 async function callOpenRouter(messages) {
   if (!OPENROUTER_API_KEY) {
-    throw new Error("OPENROUTER_API_KEY_MISSING");
+    throw new Error(
+      "OPENROUTER_API_KEY_MISSING"
+    );
   }
 
+  const openRouterMessages = [
+    {
+      role: "system",
+      content: SYSTEM_PROMPT
+    }
+  ].concat(getMessages(messages));
 
-  const response = await fetch(OPENROUTER_URL, {
-    method: "POST",
+  const response = await fetch(
+    OPENROUTER_URL,
+    {
+      method: "POST",
 
-    headers: {
-      "Content-Type": "application/json",
+      headers: {
+        "Content-Type":
+          "application/json",
 
-      "Authorization":
-        "Bearer " + OPENROUTER_API_KEY,
+        "Authorization":
+          "Bearer " +
+          OPENROUTER_API_KEY,
 
-      "HTTP-Referer":
-        "https://chat-ai-pro-ymod.onrender.com",
+        "HTTP-Referer":
+          "https://chat-ai-pro-ymod.onrender.com",
 
-      "X-Title":
-        "Anas AI"
-    },
+        "X-Title":
+          "Anas AI"
+      },
 
-    body: JSON.stringify({
-      model: OPENROUTER_MODEL,
+      body: JSON.stringify({
+        model:
+          OPENROUTER_MODEL,
 
-      messages: getMessages(messages),
+        messages:
+          openRouterMessages,
 
-      temperature: 0.7,
+        temperature: 0.2,
 
-      max_tokens: 2048
-    })
-  });
+        max_tokens: 2048
+      })
+    }
+  );
 
-
-  const data = await response.json();
-
+  const data =
+    await response.json();
 
   if (!response.ok) {
     const error =
-      new Error("OPENROUTER_FAILED");
+      new Error(
+        "OPENROUTER_FAILED"
+      );
 
     error.status = response.status;
     error.data = data;
 
     throw error;
   }
-
 
   const reply =
     data &&
@@ -265,13 +387,11 @@ async function callOpenRouter(messages) {
     data.choices[0].message &&
     data.choices[0].message.content;
 
-
   if (!reply) {
     throw new Error(
       "OPENROUTER_EMPTY_RESPONSE"
     );
   }
-
 
   return {
     reply: reply,
@@ -279,19 +399,23 @@ async function callOpenRouter(messages) {
   };
 }
 
-
-/* =========================================================
-   ROUTER
-========================================================= */
+/*
+==================================================
+ FALLBACK SYSTEM
+ Gemini → Groq → OpenRouter
+==================================================
+*/
 
 async function getAIResponse(messages) {
 
-  /* -----------------------------------------
-     المحاولة الأولى: Gemini
-  ----------------------------------------- */
+  /*
+  1 - Gemini
+  */
 
   try {
-    console.log("Trying Gemini...");
+    console.log(
+      "Trying Gemini..."
+    );
 
     const result =
       await callGemini(messages);
@@ -305,22 +429,24 @@ async function getAIResponse(messages) {
   } catch (error) {
 
     console.log(
-      "Gemini failed. Moving to Groq..."
+      "Gemini failed."
     );
 
     console.log(
       "Gemini status:",
-      error.status || "unknown"
+      error.status ||
+        "unknown"
     );
   }
 
-
-  /* -----------------------------------------
-     المحاولة الثانية: Groq
-  ----------------------------------------- */
+  /*
+  2 - Groq
+  */
 
   try {
-    console.log("Trying Groq...");
+    console.log(
+      "Trying Groq..."
+    );
 
     const result =
       await callGroq(messages);
@@ -334,19 +460,19 @@ async function getAIResponse(messages) {
   } catch (error) {
 
     console.log(
-      "Groq failed. Moving to OpenRouter..."
+      "Groq failed."
     );
 
     console.log(
       "Groq status:",
-      error.status || "unknown"
+      error.status ||
+        "unknown"
     );
   }
 
-
-  /* -----------------------------------------
-     المحاولة الثالثة: OpenRouter
-  ----------------------------------------- */
+  /*
+  3 - OpenRouter
+  */
 
   try {
     console.log(
@@ -354,7 +480,9 @@ async function getAIResponse(messages) {
     );
 
     const result =
-      await callOpenRouter(messages);
+      await callOpenRouter(
+        messages
+      );
 
     console.log(
       "OpenRouter responded successfully."
@@ -370,7 +498,8 @@ async function getAIResponse(messages) {
 
     console.log(
       "OpenRouter status:",
-      error.status || "unknown"
+      error.status ||
+        "unknown"
     );
 
     throw new Error(
@@ -379,130 +508,151 @@ async function getAIResponse(messages) {
   }
 }
 
+/*
+==================================================
+ CHAT API
+==================================================
+*/
 
-/* =========================================================
-   CHAT API
-========================================================= */
+app.post(
+  "/api/chat",
+  async function (req, res) {
 
-app.post("/api/chat", async function (req, res) {
+    try {
 
-  try {
+      const messages =
+        Array.isArray(
+          req.body.messages
+        )
+          ? req.body.messages
+          : [];
 
-    const messages =
-      Array.isArray(req.body.messages)
-        ? req.body.messages
-        : [];
+      if (!messages.length) {
 
+        return res
+          .status(400)
+          .json({
+            error:
+              "لم يتم إرسال أي رسالة."
+          });
+      }
 
-    if (!messages.length) {
+      console.log(
+        "New chat request received."
+      );
 
-      return res.status(400).json({
-        error:
-          "لم يتم إرسال أي رسالة."
+      const result =
+        await getAIResponse(
+          messages
+        );
+
+      return res.json({
+        reply: result.reply,
+
+        provider:
+          result.provider
       });
 
-    }
+    } catch (error) {
 
+      console.error(
+        "All AI providers failed:",
+        error
+      );
+
+      return res
+        .status(503)
+        .json({
+
+          error:
+            "تعذر الحصول على إجابة حاليًا. حاول مرة أخرى بعد قليل.",
+
+          allProvidersFailed:
+            true
+        });
+    }
+  }
+);
+
+/*
+==================================================
+ HEALTH CHECK
+==================================================
+*/
+
+app.get(
+  "/api/health",
+  function (req, res) {
+
+    res.json({
+
+      status: "online",
+
+      service: "Anas AI",
+
+      providers: {
+
+        gemini:
+          Boolean(
+            GEMINI_API_KEY
+          ),
+
+        groq:
+          Boolean(
+            GROQ_API_KEY
+          ),
+
+        openrouter:
+          Boolean(
+            OPENROUTER_API_KEY
+          )
+      }
+    });
+  }
+);
+
+/*
+==================================================
+ START SERVER
+==================================================
+*/
+
+app.listen(
+  PORT,
+  function () {
 
     console.log(
-      "New chat request received."
+      "================================="
     );
 
-
-    const result =
-      await getAIResponse(messages);
-
-
-    return res.json({
-
-      reply: result.reply,
-
-      provider: result.provider
-
-    });
-
-
-  } catch (error) {
-
-    console.error(
-      "All AI providers failed:",
-      error
+    console.log(
+      "Anas AI running on port " +
+        PORT
     );
 
+    console.log(
+      "Gemini:",
+      GEMINI_API_KEY
+        ? "configured"
+        : "missing"
+    );
 
-    return res.status(503).json({
+    console.log(
+      "Groq:",
+      GROQ_API_KEY
+        ? "configured"
+        : "missing"
+    );
 
-      error:
-        "تعذر الحصول على إجابة حاليًا. حاول مرة أخرى بعد قليل.",
+    console.log(
+      "OpenRouter:",
+      OPENROUTER_API_KEY
+        ? "configured"
+        : "missing"
+    );
 
-      allProvidersFailed: true
-
-    });
-
+    console.log(
+      "================================="
+    );
   }
-
-});
-
-
-/* =========================================================
-   HEALTH CHECK
-========================================================= */
-
-app.get("/api/health", function (req, res) {
-
-  res.json({
-
-    status: "online",
-
-    service: "Anas AI",
-
-    providers: {
-
-      gemini:
-        Boolean(GEMINI_API_KEY),
-
-      groq:
-        Boolean(GROQ_API_KEY),
-
-      openrouter:
-        Boolean(OPENROUTER_API_KEY)
-
-    }
-
-  });
-
-});
-
-
-/* =========================================================
-   START SERVER
-========================================================= */
-
-app.listen(PORT, function () {
-
-  console.log(
-    "Anas AI running on port " + PORT
-  );
-
-  console.log(
-    "Gemini:",
-    GEMINI_API_KEY
-      ? "configured"
-      : "missing"
-  );
-
-  console.log(
-    "Groq:",
-    GROQ_API_KEY
-      ? "configured"
-      : "missing"
-  );
-
-  console.log(
-    "OpenRouter:",
-    OPENROUTER_API_KEY
-      ? "configured"
-      : "missing"
-  );
-
-});
+);
