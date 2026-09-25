@@ -718,10 +718,8 @@ app.post("/api/chat", async (req, res) => {
 // ======================================================
 
 // Express 4 supports this wildcard.
-app.get("*", (req, res) => {
-  res.sendFile(
-    path.join(__dirname, "index.html")
-  );
+app.get("/{*splat}", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
 // ======================================================
