@@ -1,234 +1,352 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-
 <head>
-  <meta charset="UTF-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
+    <title>Chat AI Pro</title>
 
-  <title>Chat AI Pro</title>
-
-  <link
-    rel="stylesheet"
-    href="style.css"
-  >
-
-  <link
-    rel="icon"
-    type="image/png"
-    href="icon.png"
-  >
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="icon.png">
 </head>
 
 <body>
 
-  <div class="app">
+    <!-- =========================
+         LOGIN SCREEN
+    ========================== -->
 
-    <!-- =================================================
-         SIDEBAR
-    ================================================== -->
+    <div id="authScreen" class="auth-screen">
 
-    <aside
-      id="sidebar"
-      class="sidebar"
-    >
+        <div class="auth-card">
 
-      <div class="sidebar-top">
+            <div class="auth-logo">
+                <img src="icon.png" alt="Chat AI Pro">
+            </div>
 
-        <button
-          id="newChatBtn"
-          class="new-chat-btn"
-          type="button"
-        >
+            <h1>Chat AI Pro</h1>
 
-          <span class="new-chat-icon">
-            +
-          </span>
+            <p class="auth-subtitle">
+                سجّل الدخول للمتابعة
+            </p>
 
-          <span>
-            محادثة جديدة
-          </span>
+            <!-- PHONE STEP -->
 
-        </button>
+            <div id="phoneStep" class="auth-step">
 
-      </div>
+                <label for="phoneInput">
+                    رقم الجوال
+                </label>
 
+                <div class="phone-input-wrap">
+                    <span class="country-code">+966</span>
 
-      <div class="history-title">
+                    <input
+                        id="phoneInput"
+                        type="tel"
+                        inputmode="numeric"
+                        maxlength="9"
+                        placeholder="5XXXXXXXX"
+                        autocomplete="tel"
+                    >
+                </div>
 
-        <span>
-          سجل المحادثات
-        </span>
+                <button
+                    id="sendOtpBtn"
+                    class="auth-button"
+                    type="button"
+                >
+                    إرسال رمز التحقق
+                </button>
 
-      </div>
+                <div id="phoneError" class="auth-error"></div>
 
-
-      <div
-        id="conversationList"
-        class="conversation-list"
-      >
-      </div>
-
-
-      <div class="sidebar-bottom">
-
-        <div class="storage-note">
-
-          يتم حفظ المحادثات
-          على هذا الجهاز
-
-        </div>
-
-      </div>
-
-    </aside>
-
-
-    <!-- =================================================
-         MAIN AREA
-    ================================================== -->
-
-    <main class="main">
-
-      <!-- TOP BAR -->
-
-      <header class="topbar">
-
-        <div class="topbar-right">
-
-          <button
-            id="sidebarToggle"
-            class="menu-btn"
-            type="button"
-            aria-label="فتح سجل المحادثات"
-          >
-            ☰
-          </button>
-
-
-          <div class="brand">
-
-            <div class="logo">
-
-              <img
-                src="icon.png"
-                alt="Chat AI Pro"
-              >
+                <p class="auth-note">
+                    سيتم إرسال رمز تحقق إلى رقم جوالك.
+                </p>
 
             </div>
 
 
-            <div class="brand-text">
+            <!-- OTP STEP -->
 
-              <h1>
-                Chat AI Pro
-              </h1>
+            <div id="otpStep" class="auth-step hidden">
 
-              <span>
-                مساعدك الذكي
-              </span>
+                <div class="back-row">
+                    <button
+                        id="backToPhoneBtn"
+                        class="back-button"
+                        type="button"
+                    >
+                        ← تغيير الرقم
+                    </button>
+                </div>
+
+                <p class="otp-info">
+                    تم إرسال رمز التحقق إلى:
+                </p>
+
+                <strong id="sentPhone" class="sent-phone">
+                    +966
+                </strong>
+
+                <label for="otpInput">
+                    رمز التحقق
+                </label>
+
+                <input
+                    id="otpInput"
+                    class="otp-input"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="6"
+                    placeholder="••••••"
+                    autocomplete="one-time-code"
+                >
+
+                <button
+                    id="verifyOtpBtn"
+                    class="auth-button"
+                    type="button"
+                >
+                    تحقق ودخول
+                </button>
+
+                <div id="otpError" class="auth-error"></div>
+
+                <button
+                    id="resendOtpBtn"
+                    class="resend-button"
+                    type="button"
+                >
+                    إعادة إرسال الرمز
+                </button>
 
             </div>
 
-          </div>
+            <div id="authLoading" class="auth-loading hidden">
+                <div class="spinner"></div>
+                <span>جارٍ التحقق...</span>
+            </div>
 
         </div>
 
-
-        <button
-          id="topNewChat"
-          class="ghost"
-          type="button"
-        >
-          محادثة جديدة
-        </button>
-
-      </header>
+    </div>
 
 
-      <!-- CHAT -->
+    <!-- =========================
+         MAIN APP
+    ========================== -->
 
-      <main
-        id="chat"
-        class="chat"
-      >
+    <div id="app" class="app hidden">
 
-        <section class="welcome">
+        <!-- SIDEBAR -->
 
-          <div class="welcome-icon">
+        <aside class="sidebar">
 
-            <img
-              src="icon.png"
-              alt="Chat AI Pro"
+            <div class="sidebar-top">
+
+                <div class="sidebar-brand">
+
+                    <img
+                        src="icon.png"
+                        alt="Chat AI Pro"
+                    >
+
+                    <div>
+                        <strong>Chat AI Pro</strong>
+                        <span>مساعدك الذكي</span>
+                    </div>
+
+                </div>
+
+                <button
+                    id="newChatBtn"
+                    class="new-chat-btn"
+                    type="button"
+                >
+                    <span>＋</span>
+                    محادثة جديدة
+                </button>
+
+            </div>
+
+
+            <div class="history-title">
+                سجل المحادثات
+            </div>
+
+            <div
+                id="conversationList"
+                class="conversation-list"
+            ></div>
+
+
+            <div class="sidebar-bottom">
+
+                <div class="user-box">
+
+                    <div class="user-avatar">
+                        <span>👤</span>
+                    </div>
+
+                    <div class="user-info">
+                        <strong id="userPhone">
+                            مستخدم
+                        </strong>
+
+                        <span>
+                            حساب موثّق
+                        </span>
+                    </div>
+
+                </div>
+
+                <button
+                    id="logoutBtn"
+                    class="logout-btn"
+                    type="button"
+                >
+                    تسجيل الخروج
+                </button>
+
+            </div>
+
+        </aside>
+
+
+        <!-- MOBILE OVERLAY -->
+
+        <div
+            id="sidebarOverlay"
+            class="sidebar-overlay"
+        ></div>
+
+
+        <!-- MAIN -->
+
+        <main class="main">
+
+            <!-- TOP BAR -->
+
+            <header class="topbar">
+
+                <div class="brand">
+
+                    <button
+                        id="menuBtn"
+                        class="menu-btn"
+                        type="button"
+                        aria-label="فتح القائمة"
+                    >
+                        ☰
+                    </button>
+
+                    <div class="logo">
+
+                        <img
+                            src="icon.png"
+                            alt="Chat AI Pro"
+                        >
+
+                    </div>
+
+                    <div class="brand-text">
+
+                        <h1>
+                            Chat AI Pro
+                        </h1>
+
+                        <span>
+                            مساعدك الذكي
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <button
+                    id="clearBtn"
+                    class="ghost"
+                    type="button"
+                >
+                    محادثة جديدة
+                </button>
+
+            </header>
+
+
+            <!-- CHAT -->
+
+            <section
+                id="chat"
+                class="chat"
             >
 
-          </div>
+                <section
+                    id="welcome"
+                    class="welcome"
+                >
+
+                    <div class="welcome-icon">
+
+                        <img
+                            src="icon.png"
+                            alt="Chat AI Pro"
+                        >
+
+                    </div>
+
+                    <h2>
+                        مرحبًا بك في Chat AI Pro
+                    </h2>
+
+                    <p>
+                        اكتب سؤالك وسأحاول مساعدتك.
+                    </p>
+
+                </section>
+
+            </section>
 
 
-          <h2>
-            مرحبًا بك في Chat AI Pro
-          </h2>
+            <!-- COMPOSER -->
+
+            <div class="composer-wrap">
+
+                <div class="composer">
+
+                    <textarea
+                        id="message"
+                        rows="1"
+                        placeholder="اكتب رسالتك هنا..."
+                        autocomplete="off"
+                    ></textarea>
+
+                    <button
+                        id="sendBtn"
+                        class="send"
+                        type="button"
+                        aria-label="إرسال"
+                    >
+                        ➤
+                    </button>
+
+                </div>
+
+                <small>
+                    Chat AI Pro — لا تضع مفاتيح API داخل الموقع.
+                </small>
+
+            </div>
+
+        </main>
+
+    </div>
 
 
-          <p>
-            اكتب سؤالك وسأحاول مساعدتك.
-          </p>
-
-        </section>
-
-      </main>
-
-
-      <!-- COMPOSER -->
-
-      <div class="composer-wrap">
-
-        <div class="composer">
-
-          <textarea
-            id="message"
-            rows="1"
-            placeholder="اكتب رسالتك هنا..."
-            autocomplete="off"
-          ></textarea>
-
-
-          <button
-            id="sendBtn"
-            class="send"
-            type="button"
-            aria-label="إرسال"
-          >
-            ➤
-          </button>
-
-        </div>
-
-
-        <small>
-          لا تضع مفتاح API داخل هذا الموقع أو GitHub.
-        </small>
-
-      </div>
-
-    </main>
-
-  </div>
-
-
-  <!-- OVERLAY FOR MOBILE -->
-
-  <div
-    id="sidebarOverlay"
-    class="sidebar-overlay"
-  ></div>
-
-
-  <script src="script.js"></script>
+    <script src="script.js"></script>
 
 </body>
-
 </html>
