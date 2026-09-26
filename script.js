@@ -1,18 +1,19 @@
 /* =========================================================
    Chat AI Pro - script.js
+   نسخة متوافقة مع index.html الحالي
    ========================================================= */
 
 "use strict";
 
 /* =========================================================
    CONFIG
-   ========================================================= */
+========================================================= */
 
 const API_BASE = "";
 
 /* =========================================================
    STORAGE
-   ========================================================= */
+========================================================= */
 
 const STORAGE_KEYS = {
     authenticated: "chat_ai_pro_authenticated",
@@ -23,20 +24,18 @@ const STORAGE_KEYS = {
 
 /* =========================================================
    STATE
-   ========================================================= */
+========================================================= */
 
 let conversations = loadConversations();
 let currentConversationId =
-    localStorage.getItem(
-        STORAGE_KEYS.currentConversation
-    ) || null;
+    localStorage.getItem(STORAGE_KEYS.currentConversation) || null;
 
 let pendingPhone = "";
 let isSending = false;
 
 /* =========================================================
-   DOM HELPERS
-   ========================================================= */
+   DOM
+========================================================= */
 
 function $(id) {
     return document.getElementById(id);
@@ -56,228 +55,189 @@ function firstElement(...ids) {
 
 /* =========================================================
    INITIALIZATION
-   ========================================================= */
+========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
+    console.log("[Chat AI Pro] script.js loaded");
+
     setupAuthentication();
     setupChat();
+    setupExtraButtons();
 
     if (isAuthenticated()) {
         showApp();
         initializeChat();
     } else {
         showAuth();
+        showPhoneStep();
     }
 });
 
 /* =========================================================
    AUTHENTICATION
-   ========================================================= */
+========================================================= */
 
 function setupAuthentication() {
-    const phoneForm = firstElement(
-        "phoneForm",
-        "loginForm"
-    );
 
-    const otpForm = firstElement(
-        "otpForm"
-    );
+    const sendOtpButton = $("sendOtpBtn");
+    const verifyOtpButton = $("verifyOtpBtn");
+    const resendOtpButton = $("resendOtpBtn");
+    const backButton = $("backToPhoneBtn");
 
-    const sendOtpButton = firstElement(
-  "sendOtpBtn",
-  "sendOtpButton",
-  "sendOTPButton",
-  "continueButton"
-);
+    const phoneInput = $("phoneInput");
+    const otpInput = $("otpInput");
 
-const verifyOtpButton = firstElement(
-  "verifyOtpBtn",
-  "verifyOtpButton",
-  "verifyOTPButton"
-);
-    const phoneInput = firstElement(
-        "phoneInput",
-        "phone"
-    );
+    /* إرسال OTP */
 
-    const otpInput = firstElement(
-        "otpInput",
-        "otp"
-    );
+    if (sendOtpButton) {
+        sendOtpButton.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
 
-    if (phoneForm) {
-        phoneForm.addEventListener(
-            "submit",
-            (event) => {
+            console.log("[Auth] Send OTP clicked");
+
+            sendOtp();
+        });
+    }
+
+    /* تحقق OTP */
+
+    if (verifyOtpButton) {
+        verifyOtpButton.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            console.log("[Auth] Verify OTP clicked");
+
+            verifyOtp();
+        });
+    }
+
+    /* إعادة الإرسال */
+
+    if (resendOtpButton) {
+        resendOtpButton.addEventListener("click", (event) => {
+            event.preventDefault();
+
+            console.log("[Auth] Resend OTP clicked");
+
+            sendOtp();
+        });
+    }
+
+    /* تغيير الرقم */
+
+    if (backButton) {
+        backButton.addEventListener("click", (event) => {
+            event.preventDefault();
+
+            pendingPhone = "";
+
+            showPhoneStep();
+        });
+    }
+
+    /* رقم الجوال */
+
+    if (phoneInput) {
+
+        phoneInput.addEventListener("input", () => {
+
+            phoneInput.value =
+                phoneInput.value.replace(/\D/g, "");
+
+            clearAuthMessages();
+        });
+
+        phoneInput.addEventListener("keydown", (event) => {
+
+            if (event.key === "Enter") {
+
                 event.preventDefault();
 
                 sendOtp();
             }
-        );
+        });
     }
 
-    if (otpForm) {
-        otpForm.addEventListener(
-            "submit",
-            (event) => {
+    /* OTP */
+
+    if (otpInput) {
+
+        otpInput.addEventListener("input", () => {
+
+            otpInput.value =
+                otpInput.value.replace(/\D/g, "").slice(0, 6);
+
+            clearAuthMessages();
+        });
+
+        otpInput.addEventListener("keydown", (event) => {
+
+            if (event.key === "Enter") {
+
                 event.preventDefault();
 
                 verifyOtp();
             }
-        );
+        });
     }
 
-    if (sendOtpButton) {
-        sendOtpButton.addEventListener(
-            "click",
-            (event) => {
-                if (
-                    sendOtpButton.tagName !==
-                    "BUTTON" ||
-                    sendOtpButton.type !==
-                    "submit"
-                ) {
-                    event.preventDefault();
+    /* تسجيل الخروج */
 
-                    sendOtp();
-                }
-            }
-        );
-    }
+    const logoutBtn = $("logoutBtn");
 
-    if (verifyOtpButton) {
-        verifyOtpButton.addEventListener(
-            "click",
-            (event) => {
-                if (
-                    verifyOtpButton.tagName !==
-                    "BUTTON" ||
-                    verifyOtpButton.type !==
-                    "submit"
-                ) {
-                    event.preventDefault();
+    if (logoutBtn) {
 
-                    verifyOtp();
-                }
-            }
-        );
-    }
+        logoutBtn.addEventListener("click", (event) => {
 
-    if (phoneInput) {
-        phoneInput.addEventListener(
-            "input",
-            () => {
-                phoneInput.value =
-                    phoneInput.value.replace(
-                        /[^\d+]/g,
-                        ""
-                    );
-            }
-        );
+            event.preventDefault();
 
-        phoneInput.addEventListener(
-            "keydown",
-            (event) => {
-                if (event.key === "Enter") {
-                    event.preventDefault();
-
-                    sendOtp();
-                }
-            }
-        );
-    }
-
-    if (otpInput) {
-        otpInput.addEventListener(
-            "input",
-            () => {
-                otpInput.value =
-                    otpInput.value.replace(
-                        /\D/g,
-                        ""
-                    );
-            }
-        );
-
-        otpInput.addEventListener(
-            "keydown",
-            (event) => {
-                if (event.key === "Enter") {
-                    event.preventDefault();
-
-                    verifyOtp();
-                }
-            }
-        );
-    }
-
-    const logoutButton = firstElement(
-        "logoutButton",
-        "logoutBtn"
-    );
-
-    if (logoutButton) {
-        logoutButton.addEventListener(
-            "click",
-            logout
-        );
-    }
-
-    const backButton = firstElement(
-        "backToPhone",
-        "backButton"
-    );
-
-    if (backButton) {
-        backButton.addEventListener(
-            "click",
-            showPhoneStep
-        );
+            logout();
+        });
     }
 }
 
 /* =========================================================
    PHONE NORMALIZATION
-   ========================================================= */
+========================================================= */
 
-function normalizeSaudiPhone(phone) {
-    if (!phone) {
+function normalizeSaudiPhone(value) {
+
+    if (!value) {
         return null;
     }
 
-    let value =
-        String(phone).trim();
+    let phone = String(value)
+        .trim()
+        .replace(/[\s\-()]/g, "");
 
-    value =
-        value.replace(
-            /[\s\-()]/g,
-            ""
-        );
+    /* 05XXXXXXXX */
 
-    if (/^05\d{8}$/.test(value)) {
-        return (
-            "+966" +
-            value.substring(1)
-        );
+    if (/^05\d{8}$/.test(phone)) {
+
+        return "+966" + phone.substring(1);
     }
 
-    if (/^5\d{8}$/.test(value)) {
-        return (
-            "+966" +
-            value
-        );
+    /* 5XXXXXXXX */
+
+    if (/^5\d{8}$/.test(phone)) {
+
+        return "+966" + phone;
     }
 
-    if (/^9665\d{8}$/.test(value)) {
-        return (
-            "+" +
-            value
-        );
+    /* 9665XXXXXXXX */
+
+    if (/^9665\d{8}$/.test(phone)) {
+
+        return "+" + phone;
     }
 
-    if (/^\+9665\d{8}$/.test(value)) {
-        return value;
+    /* +9665XXXXXXXX */
+
+    if (/^\+9665\d{8}$/.test(phone)) {
+
+        return phone;
     }
 
     return null;
@@ -285,20 +245,19 @@ function normalizeSaudiPhone(phone) {
 
 /* =========================================================
    SEND OTP
-   ========================================================= */
+========================================================= */
 
 async function sendOtp() {
+
     if (isSending) {
         return;
     }
 
-    const phoneInput =
-        firstElement(
-            "phoneInput",
-            "phone"
-        );
+    const phoneInput = $("phoneInput");
+    const sendButton = $("sendOtpBtn");
 
     if (!phoneInput) {
+
         showAuthError(
             "لم يتم العثور على خانة رقم الجوال."
         );
@@ -306,80 +265,83 @@ async function sendOtp() {
         return;
     }
 
-    const phone =
-        normalizeSaudiPhone(
-            phoneInput.value
-        );
+    const phone = normalizeSaudiPhone(
+        phoneInput.value
+    );
 
     if (!phone) {
+
         showAuthError(
-            "أدخل رقم جوال سعودي صحيح."
+            "أدخل رقم جوال سعودي صحيح، مثل 5XXXXXXXX."
         );
+
+        phoneInput.focus();
 
         return;
     }
 
     pendingPhone = phone;
 
-    const button =
-        firstElement(
-            "sendOtpButton",
-            "sendOTPButton",
-            "continueButton"
-        );
+    isSending = true;
+
+    clearAuthMessages();
 
     setButtonLoading(
-        button,
+        sendButton,
         true,
-        "جارٍ الإرسال..."
+        "جارٍ إرسال الرمز..."
     );
 
-    clearAuthError();
-
     try {
-        const response =
-            await fetch(
-                `${API_BASE}/api/auth/send-otp`,
-                {
-                    method: "POST",
 
-                    headers: {
-                        "Content-Type":
-                            "application/json",
-                        "Accept":
-                            "application/json"
-                    },
+        const response = await fetch(
+            `${API_BASE}/api/auth/send-otp`,
+            {
+                method: "POST",
 
-                    body: JSON.stringify({
-                        phone: phone
-                    })
-                }
-            );
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+
+                body: JSON.stringify({
+                    phone: phone
+                })
+            }
+        );
 
         const data =
-            await parseJsonResponse(
-                response
-            );
+            await parseJsonResponse(response);
 
-        if (
-            !response.ok ||
-            !data.success
-        ) {
+        if (!response.ok || data.success === false) {
+
             throw new Error(
                 data.message ||
-                "تعذر إرسال رمز التحقق عبر WhatsApp."
+                data.error ||
+                "تعذر إرسال رمز التحقق."
             );
+        }
+
+        console.log(
+            "[Auth] OTP sent successfully"
+        );
+
+        const sentPhone = $("sentPhone");
+
+        if (sentPhone) {
+            sentPhone.textContent = phone;
         }
 
         showOtpStep();
 
-        showAuthMessage(
+        showAuthSuccess(
             "تم إرسال رمز التحقق إلى WhatsApp."
         );
 
     } catch (error) {
+
         console.error(
-            "Send OTP error:",
+            "[Auth] Send OTP error:",
             error
         );
 
@@ -389,30 +351,32 @@ async function sendOtp() {
         );
 
     } finally {
+
+        isSending = false;
+
         setButtonLoading(
-            button,
+            sendButton,
             false,
-            "إرسال الرمز"
+            "إرسال رمز التحقق"
         );
     }
 }
 
 /* =========================================================
    VERIFY OTP
-   ========================================================= */
+========================================================= */
 
 async function verifyOtp() {
+
     if (isSending) {
         return;
     }
 
-    const otpInput =
-        firstElement(
-            "otpInput",
-            "otp"
-        );
+    const otpInput = $("otpInput");
+    const verifyButton = $("verifyOtpBtn");
 
     if (!otpInput) {
+
         showAuthError(
             "لم يتم العثور على خانة رمز التحقق."
         );
@@ -421,19 +385,22 @@ async function verifyOtp() {
     }
 
     const otp =
-        String(
-            otpInput.value || ""
-        ).trim();
+        String(otpInput.value || "")
+            .trim();
 
-    if (!/^\d{4,8}$/.test(otp)) {
+    if (!/^\d{4,6}$/.test(otp)) {
+
         showAuthError(
-            "أدخل رمز التحقق بشكل صحيح."
+            "أدخل رمز التحقق المكوّن من الأرقام."
         );
+
+        otpInput.focus();
 
         return;
     }
 
     if (!pendingPhone) {
+
         showPhoneStep();
 
         showAuthError(
@@ -443,56 +410,52 @@ async function verifyOtp() {
         return;
     }
 
-    const button =
-        firstElement(
-            "verifyOtpButton",
-            "verifyOTPButton"
-        );
+    isSending = true;
+
+    clearAuthMessages();
 
     setButtonLoading(
-        button,
+        verifyButton,
         true,
         "جارٍ التحقق..."
     );
 
-    clearAuthError();
+    showAuthLoading(true);
 
     try {
-        const response =
-            await fetch(
-                `${API_BASE}/api/auth/verify-otp`,
-                {
-                    method: "POST",
 
-                    headers: {
-                        "Content-Type":
-                            "application/json",
-                        "Accept":
-                            "application/json"
-                    },
+        const response = await fetch(
+            `${API_BASE}/api/auth/verify-otp`,
+            {
+                method: "POST",
 
-                    body: JSON.stringify({
-                        phone:
-                            pendingPhone,
-                        otp: otp
-                    })
-                }
-            );
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+
+                body: JSON.stringify({
+                    phone: pendingPhone,
+                    otp: otp
+                })
+            }
+        );
 
         const data =
-            await parseJsonResponse(
-                response
-            );
+            await parseJsonResponse(response);
 
-        if (
-            !response.ok ||
-            !data.success
-        ) {
+        if (!response.ok || data.success === false) {
+
             throw new Error(
                 data.message ||
+                data.error ||
                 "رمز التحقق غير صحيح."
             );
         }
+
+        console.log(
+            "[Auth] OTP verified successfully"
+        );
 
         localStorage.setItem(
             STORAGE_KEYS.authenticated,
@@ -509,8 +472,9 @@ async function verifyOtp() {
         initializeChat();
 
     } catch (error) {
+
         console.error(
-            "Verify OTP error:",
+            "[Auth] Verify OTP error:",
             error
         );
 
@@ -520,189 +484,271 @@ async function verifyOtp() {
         );
 
     } finally {
+
+        isSending = false;
+
+        showAuthLoading(false);
+
         setButtonLoading(
-            button,
+            verifyButton,
             false,
-            "تحقق"
+            "تحقق ودخول"
         );
     }
 }
 
 /* =========================================================
    AUTH UI
-   ========================================================= */
+========================================================= */
 
 function showAuth() {
-    const authScreen =
-        firstElement(
-            "authScreen",
-            "loginScreen",
-            "auth"
-        );
 
-    const appScreen =
-        firstElement(
-            "appScreen",
-            "chatApp",
-            "app"
-        );
+    const authScreen = $("authScreen");
+    const app = $("app");
 
     if (authScreen) {
-        authScreen.style.display =
-            "";
+
+        authScreen.classList.remove("hidden");
+
+        authScreen.style.display = "flex";
     }
 
-    if (appScreen) {
-        appScreen.style.display =
-            "none";
+    if (app) {
+
+        app.classList.add("hidden");
+
+        app.style.display = "none";
     }
 }
 
 function showApp() {
-    const authScreen =
-        firstElement(
-            "authScreen",
-            "loginScreen",
-            "auth"
-        );
 
-    const appScreen =
-        firstElement(
-            "appScreen",
-            "chatApp",
-            "app"
-        );
+    const authScreen = $("authScreen");
+    const app = $("app");
 
     if (authScreen) {
-        authScreen.style.display =
-            "none";
+
+        authScreen.classList.add("hidden");
+
+        authScreen.style.display = "none";
     }
 
-    if (appScreen) {
-        appScreen.style.display =
-            "";
+    if (app) {
+
+        app.classList.remove("hidden");
+
+        app.style.display = "";
     }
+
+    updateUserPhone();
 }
 
 function showPhoneStep() {
-    const phoneStep =
-        firstElement(
-            "phoneStep",
-            "loginStep"
-        );
 
-    const otpStep =
-        firstElement(
-            "otpStep"
-        );
+    const phoneStep = $("phoneStep");
+    const otpStep = $("otpStep");
 
     if (phoneStep) {
-        phoneStep.style.display =
-            "";
+
+        phoneStep.classList.remove("hidden");
+
+        phoneStep.style.display = "";
     }
 
     if (otpStep) {
-        otpStep.style.display =
-            "none";
+
+        otpStep.classList.add("hidden");
+
+        otpStep.style.display = "none";
     }
 
-    clearAuthError();
+    clearAuthMessages();
+
+    const phoneInput = $("phoneInput");
+
+    if (phoneInput) {
+
+        setTimeout(() => {
+
+            phoneInput.focus();
+
+        }, 100);
+    }
 }
 
 function showOtpStep() {
-    const phoneStep =
-        firstElement(
-            "phoneStep",
-            "loginStep"
-        );
 
-    const otpStep =
-        firstElement(
-            "otpStep"
-        );
+    const phoneStep = $("phoneStep");
+    const otpStep = $("otpStep");
+    const otpInput = $("otpInput");
 
     if (phoneStep) {
-        phoneStep.style.display =
-            "none";
+
+        phoneStep.classList.add("hidden");
+
+        phoneStep.style.display = "none";
     }
 
     if (otpStep) {
-        otpStep.style.display =
-            "";
+
+        otpStep.classList.remove("hidden");
+
+        otpStep.style.display = "";
     }
 
-    const otpInput =
-        firstElement(
-            "otpInput",
-            "otp"
-        );
-
     if (otpInput) {
-        setTimeout(
-            () => otpInput.focus(),
-            100
-        );
+
+        otpInput.value = "";
+
+        setTimeout(() => {
+
+            otpInput.focus();
+
+        }, 100);
+    }
+}
+
+function showAuthLoading(show) {
+
+    const loading = $("authLoading");
+
+    if (!loading) {
+        return;
+    }
+
+    if (show) {
+
+        loading.classList.remove("hidden");
+
+        loading.style.display = "flex";
+
+    } else {
+
+        loading.classList.add("hidden");
+
+        loading.style.display = "none";
     }
 }
 
 function showAuthError(message) {
-    const element =
-        firstElement(
-            "authError",
-            "loginError",
-            "errorMessage"
-        );
 
-    if (!element) {
-        alert(message);
+    const phoneError = $("phoneError");
+    const otpError = $("otpError");
+
+    const otpStep = $("otpStep");
+
+    if (otpStep && !otpStep.classList.contains("hidden")) {
+
+        if (otpError) {
+
+            otpError.textContent = message;
+
+            otpError.style.display = "";
+        }
+
+    } else {
+
+        if (phoneError) {
+
+            phoneError.textContent = message;
+
+            phoneError.style.display = "";
+        }
+    }
+}
+
+function showAuthSuccess(message) {
+
+    const phoneError = $("phoneError");
+    const otpError = $("otpError");
+
+    const otpStep = $("otpStep");
+
+    const target =
+        otpStep &&
+        !otpStep.classList.contains("hidden")
+            ? otpError
+            : phoneError;
+
+    if (target) {
+
+        target.textContent = message;
+
+        target.style.color = "#55d6a5";
+
+        target.style.display = "";
+    }
+}
+
+function clearAuthMessages() {
+
+    const errors = [
+        $("phoneError"),
+        $("otpError")
+    ];
+
+    errors.forEach((element) => {
+
+        if (!element) {
+            return;
+        }
+
+        element.textContent = "";
+
+        element.style.display = "none";
+
+        element.style.color = "";
+    });
+}
+
+function setButtonLoading(
+    button,
+    loading,
+    loadingText
+) {
+
+    if (!button) {
         return;
     }
 
-    element.textContent =
-        message;
+    if (loading) {
 
-    element.style.display =
-        "";
-}
+        if (!button.dataset.originalText) {
 
-function showAuthMessage(message) {
-    const element =
-        firstElement(
-            "authMessage",
-            "loginMessage",
-            "successMessage"
-        );
+            button.dataset.originalText =
+                button.textContent;
+        }
 
-    if (element) {
-        element.textContent =
-            message;
+        button.disabled = true;
 
-        element.style.display =
-            "";
-    }
-}
+        button.textContent =
+            loadingText;
 
-function clearAuthError() {
-    const element =
-        firstElement(
-            "authError",
-            "loginError",
-            "errorMessage"
-        );
+    } else {
 
-    if (element) {
-        element.textContent = "";
+        button.disabled = false;
 
-        element.style.display =
-            "none";
+        button.textContent =
+            button.dataset.originalText ||
+            button.textContent;
     }
 }
 
 /* =========================================================
-   LOGOUT
-   ========================================================= */
+   AUTH STATE
+========================================================= */
+
+function isAuthenticated() {
+
+    return (
+        localStorage.getItem(
+            STORAGE_KEYS.authenticated
+        ) === "true"
+    );
+}
 
 function logout() {
+
     localStorage.removeItem(
         STORAGE_KEYS.authenticated
     );
@@ -713,46 +759,53 @@ function logout() {
 
     pendingPhone = "";
 
+    const otpInput = $("otpInput");
+
+    if (otpInput) {
+        otpInput.value = "";
+    }
+
     showAuth();
+
     showPhoneStep();
 }
 
 /* =========================================================
-   AUTH STATE
-   ========================================================= */
+   USER PHONE
+========================================================= */
 
-function isAuthenticated() {
-    return (
+function updateUserPhone() {
+
+    const userPhone = $("userPhone");
+
+    if (!userPhone) {
+        return;
+    }
+
+    const phone =
         localStorage.getItem(
-            STORAGE_KEYS.authenticated
-        ) === "true"
-    );
+            STORAGE_KEYS.phone
+        );
+
+    userPhone.textContent =
+        phone || "مستخدم";
 }
 
 /* =========================================================
    CHAT SETUP
-   ========================================================= */
+========================================================= */
 
 function setupChat() {
-    const sendButton =
-        firstElement(
-            "sendButton",
-            "sendBtn",
-            "submitButton"
-        );
 
-    const messageInput =
-        firstElement(
-            "messageInput",
-            "message",
-            "chatInput",
-            "userInput"
-        );
+    const sendBtn = $("sendBtn");
+    const messageInput = $("message");
 
-    if (sendButton) {
-        sendButton.addEventListener(
+    if (sendBtn) {
+
+        sendBtn.addEventListener(
             "click",
             (event) => {
+
                 event.preventDefault();
 
                 sendMessage();
@@ -761,13 +814,16 @@ function setupChat() {
     }
 
     if (messageInput) {
+
         messageInput.addEventListener(
             "keydown",
             (event) => {
+
                 if (
                     event.key === "Enter" &&
                     !event.shiftKey
                 ) {
+
                     event.preventDefault();
 
                     sendMessage();
@@ -781,17 +837,29 @@ function setupChat() {
         );
     }
 
-    const newChatButton =
-        firstElement(
-            "newChatButton",
-            "newChat",
-            "newConversation"
-        );
+    const newChatBtn = $("newChatBtn");
 
-    if (newChatButton) {
-        newChatButton.addEventListener(
+    if (newChatBtn) {
+
+        newChatBtn.addEventListener(
             "click",
-            createNewConversation
+            () => {
+
+                createNewConversation(true);
+            }
+        );
+    }
+
+    const clearBtn = $("clearBtn");
+
+    if (clearBtn) {
+
+        clearBtn.addEventListener(
+            "click",
+            () => {
+
+                createNewConversation(true);
+            }
         );
     }
 
@@ -800,39 +868,39 @@ function setupChat() {
 
 /* =========================================================
    SEND MESSAGE
-   ========================================================= */
+========================================================= */
 
 async function sendMessage() {
+
     if (isSending) {
         return;
     }
 
-    const input =
-        firstElement(
-            "messageInput",
-            "message",
-            "chatInput",
-            "userInput"
-        );
+    const input = $("message");
+    const sendBtn = $("sendBtn");
 
     if (!input) {
+
         console.error(
-            "Chat input not found."
+            "[Chat] Message input not found"
         );
 
         return;
     }
 
     const message =
-        String(
-            input.value || ""
-        ).trim();
+        String(input.value || "")
+            .trim();
 
     if (!message) {
+
+        input.focus();
+
         return;
     }
 
     if (!isAuthenticated()) {
+
         showAuth();
 
         return;
@@ -840,58 +908,70 @@ async function sendMessage() {
 
     isSending = true;
 
-    const sendButton =
-        firstElement(
-            "sendButton",
-            "sendBtn",
-            "submitButton"
-        );
-
     input.value = "";
 
     autoResizeInput({
         target: input
     });
 
-    // Create conversation if necessary
     if (!currentConversationId) {
-        createNewConversation(
-            false
-        );
+
+        createNewConversation(false);
     }
 
-    // User message
     addMessageToCurrentConversation(
         "user",
         message
     );
 
+    saveConversations();
+
     renderMessages();
+
+    renderConversationList();
 
     scrollChatToBottom();
 
     setButtonLoading(
-        sendButton,
+        sendBtn,
         true,
         "..."
     );
 
-    const typingElement =
-        addTypingIndicator();
+    const typing = addTypingIndicator();
 
     try {
+
+        const conversation =
+            getCurrentConversation();
+
         /*
          * IMPORTANT:
-         *
-         * The server expects:
+         * server.js الحالي يستقبل:
          *
          * {
-         *     "message": "..."
+         *   messages: [
+         *     { role: "user", content: "..." }
+         *   ]
          * }
-         *
-         * This fixes the previous
-         * "اكتب رسالة أولاً" problem.
          */
+
+        const messages =
+            conversation.messages
+                .filter(
+                    (item) =>
+                        item.role === "user" ||
+                        item.role === "assistant"
+                )
+                .map(
+                    (item) => ({
+                        role: item.role,
+                        content: String(
+                            item.content || ""
+                        )
+                    })
+                )
+                .slice(-30);
 
         const response =
             await fetch(
@@ -908,8 +988,7 @@ async function sendMessage() {
                     },
 
                     body: JSON.stringify({
-                        message:
-                            message
+                        messages: messages
                     })
                 }
             );
@@ -920,16 +999,15 @@ async function sendMessage() {
             );
 
         removeTypingIndicator(
-            typingElement
+            typing
         );
 
-        if (
-            !response.ok ||
-            !data.success
-        ) {
+        if (!response.ok) {
+
             throw new Error(
+                data.error ||
                 data.message ||
-                "حدث خطأ أثناء الاتصال بالذكاء الاصطناعي."
+                "تعذر الحصول على رد من الخادم."
             );
         }
 
@@ -938,7 +1016,11 @@ async function sendMessage() {
             data.response ||
             data.message;
 
-        if (!answer) {
+        if (
+            typeof answer !== "string" ||
+            !answer.trim()
+        ) {
+
             throw new Error(
                 "لم يصل رد من الذكاء الاصطناعي."
             );
@@ -946,8 +1028,7 @@ async function sendMessage() {
 
         addMessageToCurrentConversation(
             "assistant",
-            answer,
-            data.provider
+            answer
         );
 
         saveConversations();
@@ -959,12 +1040,13 @@ async function sendMessage() {
         scrollChatToBottom();
 
     } catch (error) {
+
         removeTypingIndicator(
-            typingElement
+            typing
         );
 
         console.error(
-            "Chat error:",
+            "[Chat] Error:",
             error
         );
 
@@ -981,12 +1063,13 @@ async function sendMessage() {
         scrollChatToBottom();
 
     } finally {
+
         isSending = false;
 
         setButtonLoading(
-            sendButton,
+            sendBtn,
             false,
-            ""
+            "➤"
         );
 
         input.focus();
@@ -995,11 +1078,10 @@ async function sendMessage() {
 
 /* =========================================================
    PARSE JSON
-   ========================================================= */
+========================================================= */
 
-async function parseJsonResponse(
-    response
-) {
+async function parseJsonResponse(response) {
+
     const text =
         await response.text();
 
@@ -1008,10 +1090,14 @@ async function parseJsonResponse(
     }
 
     try {
+
         return JSON.parse(text);
+
     } catch {
+
         return {
             success: false,
+            error: text,
             message: text
         };
     }
@@ -1019,10 +1105,12 @@ async function parseJsonResponse(
 
 /* =========================================================
    CONVERSATIONS
-   ========================================================= */
+========================================================= */
 
 function loadConversations() {
+
     try {
+
         const saved =
             localStorage.getItem(
                 STORAGE_KEYS.conversations
@@ -1040,8 +1128,9 @@ function loadConversations() {
             : [];
 
     } catch (error) {
+
         console.error(
-            "Could not load conversations:",
+            "[Storage] Load error:",
             error
         );
 
@@ -1050,7 +1139,9 @@ function loadConversations() {
 }
 
 function saveConversations() {
+
     try {
+
         localStorage.setItem(
             STORAGE_KEYS.conversations,
             JSON.stringify(
@@ -1059,6 +1150,7 @@ function saveConversations() {
         );
 
         if (currentConversationId) {
+
             localStorage.setItem(
                 STORAGE_KEYS.currentConversation,
                 currentConversationId
@@ -1066,8 +1158,9 @@ function saveConversations() {
         }
 
     } catch (error) {
+
         console.error(
-            "Could not save conversations:",
+            "[Storage] Save error:",
             error
         );
     }
@@ -1076,16 +1169,19 @@ function saveConversations() {
 function createNewConversation(
     render = true
 ) {
+
     const conversation = {
+
         id:
             "conversation_" +
             Date.now() +
             "_" +
             Math.random()
                 .toString(36)
-                .substring(2, 8),
+                .slice(2, 8),
 
-        title: "محادثة جديدة",
+        title:
+            "محادثة جديدة",
 
         createdAt:
             new Date().toISOString(),
@@ -1103,7 +1199,9 @@ function createNewConversation(
     saveConversations();
 
     if (render) {
+
         renderMessages();
+
         renderConversationList();
     }
 
@@ -1113,6 +1211,7 @@ function createNewConversation(
 }
 
 function getCurrentConversation() {
+
     return conversations.find(
         (conversation) =>
             conversation.id ===
@@ -1122,44 +1221,44 @@ function getCurrentConversation() {
 
 function addMessageToCurrentConversation(
     role,
-    content,
-    provider = null
+    content
 ) {
+
     let conversation =
         getCurrentConversation();
 
     if (!conversation) {
+
         conversation =
-            createNewConversation(
-                false
-            );
+            createNewConversation(false);
     }
 
     conversation.messages.push({
+
         id:
             "message_" +
             Date.now() +
             "_" +
             Math.random()
                 .toString(36)
-                .substring(2, 8),
+                .slice(2, 8),
 
         role: role,
 
-        content: content,
-
-        provider: provider,
+        content: String(
+            content || ""
+        ),
 
         timestamp:
             new Date().toISOString()
     });
 
-    // Automatically create title
     if (
         role === "user" &&
         conversation.title ===
             "محادثة جديدة"
     ) {
+
         conversation.title =
             makeConversationTitle(
                 content
@@ -1170,36 +1269,38 @@ function addMessageToCurrentConversation(
 }
 
 /* =========================================================
-   CONVERSATION TITLE
-   ========================================================= */
+   TITLE
+========================================================= */
 
-function makeConversationTitle(
-    text
-) {
+function makeConversationTitle(text) {
+
     const clean =
-        String(text)
+        String(text || "")
             .replace(/\s+/g, " ")
             .trim();
 
     if (!clean) {
+
         return "محادثة جديدة";
     }
 
-    if (clean.length <= 28) {
+    if (clean.length <= 30) {
+
         return clean;
     }
 
     return (
-        clean.substring(0, 28) +
+        clean.substring(0, 30) +
         "..."
     );
 }
 
 /* =========================================================
    INITIALIZE CHAT
-   ========================================================= */
+========================================================= */
 
 function initializeChat() {
+
     conversations =
         loadConversations();
 
@@ -1212,10 +1313,14 @@ function initializeChat() {
         !currentConversationId ||
         !getCurrentConversation()
     ) {
-        if (conversations.length) {
+
+        if (conversations.length > 0) {
+
             currentConversationId =
                 conversations[0].id;
+
         } else {
+
             createNewConversation(
                 false
             );
@@ -1227,51 +1332,70 @@ function initializeChat() {
     renderMessages();
 
     renderConversationList();
+
+    updateUserPhone();
 }
 
 /* =========================================================
    RENDER MESSAGES
-   ========================================================= */
+========================================================= */
 
 function renderMessages() {
-    const container =
-        firstElement(
-            "messages",
-            "chatMessages",
-            "messagesContainer"
-        );
 
-    if (!container) {
-        console.warn(
-            "Messages container not found."
-        );
+    const chat = $("chat");
 
+    if (!chat) {
         return;
     }
-
-    container.innerHTML = "";
 
     const conversation =
         getCurrentConversation();
 
+    /* امسح الرسائل القديمة مع الحفاظ على welcome */
+
+    const oldMessages =
+        chat.querySelectorAll(
+            ".message-row, .message, .typing-message"
+        );
+
+    oldMessages.forEach(
+        (element) =>
+            element.remove()
+    );
+
+    const welcome =
+        $("welcome");
+
     if (
         !conversation ||
-        conversation.messages.length ===
-            0
+        !conversation.messages ||
+        conversation.messages.length === 0
     ) {
+
+        if (welcome) {
+
+            welcome.style.display = "";
+        }
+
         return;
+    }
+
+    if (welcome) {
+
+        welcome.style.display = "none";
     }
 
     for (
         const message of
         conversation.messages
     ) {
+
         const element =
             createMessageElement(
                 message
             );
 
-        container.appendChild(
+        chat.appendChild(
             element
         );
     }
@@ -1280,113 +1404,117 @@ function renderMessages() {
 }
 
 /* =========================================================
-   CREATE MESSAGE ELEMENT
-   ========================================================= */
+   MESSAGE ELEMENT
+========================================================= */
 
 function createMessageElement(
     message
 ) {
-    const wrapper =
-        document.createElement(
-            "div"
-        );
 
-    wrapper.className =
-        "message " +
+    const row =
+        document.createElement("div");
+
+    row.className =
+        "message-row " +
         (
-            message.role ===
-            "user"
-                ? "user-message"
-                : message.role ===
-                  "error"
-                ? "error-message"
-                : "assistant-message"
+            message.role === "user"
+                ? "user"
+                : "assistant"
         );
 
     const bubble =
-        document.createElement(
-            "div"
-        );
+        document.createElement("div");
 
     bubble.className =
         "message-bubble";
 
-    if (
-        message.role ===
-        "assistant"
-    ) {
+    if (message.role === "user") {
+
+        bubble.textContent =
+            message.content;
+
+    } else {
+
         bubble.innerHTML =
             formatAIText(
                 message.content
             );
-    } else {
-        bubble.textContent =
-            message.content;
     }
 
-    wrapper.appendChild(
+    row.appendChild(
         bubble
     );
 
-    return wrapper;
+    return row;
 }
 
 /* =========================================================
-   SIMPLE MARKDOWN FORMATTER
-   ========================================================= */
+   SAFE MARKDOWN
+========================================================= */
 
 function escapeHTML(text) {
-    return String(text)
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
+
+    return String(text || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 function formatAIText(text) {
-    let html =
-        escapeHTML(
-            text || ""
-        );
 
-    // Code blocks
+    let html =
+        escapeHTML(text);
+
+    /* code blocks */
+
     html =
         html.replace(
             /```([\s\S]*?)```/g,
             "<pre><code>$1</code></pre>"
         );
 
-    // Bold
-    html =
-        html.replace(
-            /\*\*(.*?)\*\*/g,
-            "<strong>$1</strong>"
-        );
+    /* inline code */
 
-    // Inline code
     html =
         html.replace(
             /`([^`]+)`/g,
             "<code>$1</code>"
         );
 
-    // New lines
+    /* bold */
+
+    html =
+        html.replace(
+            /\*\*(.*?)\*\*/g,
+            "<strong>$1</strong>"
+        );
+
+    /* headings */
+
+    html =
+        html.replace(
+            /^### (.*)$/gm,
+            "<strong>$1</strong>"
+        );
+
+    html =
+        html.replace(
+            /^## (.*)$/gm,
+            "<strong>$1</strong>"
+        );
+
+    /* unordered lists */
+
+    html =
+        html.replace(
+            /^[-•] (.*)$/gm,
+            "• $1"
+        );
+
+    /* new lines */
+
     html =
         html.replace(
             /\n/g,
@@ -1398,37 +1526,33 @@ function formatAIText(text) {
 
 /* =========================================================
    TYPING INDICATOR
-   ========================================================= */
+========================================================= */
 
 function addTypingIndicator() {
-    const container =
-        firstElement(
-            "messages",
-            "chatMessages",
-            "messagesContainer"
-        );
 
-    if (!container) {
+    const chat = $("chat");
+
+    if (!chat) {
         return null;
     }
 
     const element =
-        document.createElement(
-            "div"
-        );
+        document.createElement("div");
 
     element.className =
-        "message assistant-message typing-message";
+        "message-row assistant typing-message";
 
     element.innerHTML = `
         <div class="message-bubble">
-            <span class="typing-dot"></span>
-            <span class="typing-dot"></span>
-            <span class="typing-dot"></span>
+            <div class="loading-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
         </div>
     `;
 
-    container.appendChild(
+    chat.appendChild(
         element
     );
 
@@ -1440,27 +1564,24 @@ function addTypingIndicator() {
 function removeTypingIndicator(
     element
 ) {
+
     if (
         element &&
         element.parentNode
     ) {
-        element.parentNode.removeChild(
-            element
-        );
+
+        element.remove();
     }
 }
 
 /* =========================================================
    CONVERSATION LIST
-   ========================================================= */
+========================================================= */
 
 function renderConversationList() {
+
     const container =
-        firstElement(
-            "conversationList",
-            "historyList",
-            "chatHistory"
-        );
+        $("conversationList");
 
     if (!container) {
         return;
@@ -1468,217 +1589,166 @@ function renderConversationList() {
 
     container.innerHTML = "";
 
-    for (
-        const conversation of
-        conversations
-    ) {
-        const item =
-            document.createElement(
-                "button"
+    if (conversations.length === 0) {
+
+        container.innerHTML = `
+            <div class="empty-history">
+                لا توجد محادثات حتى الآن
+            </div>
+        `;
+
+        return;
+    }
+
+    conversations.forEach(
+        (conversation) => {
+
+            const item =
+                document.createElement(
+                    "div"
+                );
+
+            item.className =
+                "conversation-item";
+
+            if (
+                conversation.id ===
+                currentConversationId
+            ) {
+
+                item.classList.add(
+                    "active"
+                );
+            }
+
+            const main =
+                document.createElement(
+                    "div"
+                );
+
+            main.className =
+                "conversation-main";
+
+            const title =
+                document.createElement(
+                    "div"
+                );
+
+            title.className =
+                "conversation-title";
+
+            title.textContent =
+                conversation.title ||
+                "محادثة جديدة";
+
+            const date =
+                document.createElement(
+                    "div"
+                );
+
+            date.className =
+                "conversation-date";
+
+            date.textContent =
+                formatDate(
+                    conversation.createdAt
+                );
+
+            main.appendChild(
+                title
             );
 
-        item.type = "button";
+            main.appendChild(
+                date
+            );
 
-        item.className =
-            "conversation-item";
+            item.appendChild(
+                main
+            );
 
-        if (
-            conversation.id ===
-            currentConversationId
-        ) {
-            item.classList.add(
-                "active"
+            /* فتح المحادثة */
+
+            item.addEventListener(
+                "click",
+                () => {
+
+                    currentConversationId =
+                        conversation.id;
+
+                    saveConversations();
+
+                    renderMessages();
+
+                    renderConversationList();
+
+                    closeMobileSidebar();
+                }
+            );
+
+            container.appendChild(
+                item
             );
         }
-
-        const title =
-            document.createElement(
-                "div"
-            );
-
-        title.className =
-            "conversation-title";
-
-        title.textContent =
-            conversation.title ||
-            "محادثة جديدة";
-
-        const date =
-            document.createElement(
-                "div"
-            );
-
-        date.className =
-            "conversation-date";
-
-        date.textContent =
-            formatDate(
-                conversation.createdAt
-            );
-
-        item.appendChild(
-            title
-        );
-
-        item.appendChild(
-            date
-        );
-
-        item.addEventListener(
-            "click",
-            () => {
-                currentConversationId =
-                    conversation.id;
-
-                saveConversations();
-
-                renderMessages();
-
-                renderConversationList();
-
-                closeMobileSidebar();
-            }
-        );
-
-        container.appendChild(
-            item
-        );
-    }
+    );
 }
 
 /* =========================================================
    DATE
-   ========================================================= */
+========================================================= */
 
-function formatDate(
-    value
-) {
+function formatDate(dateString) {
+
+    if (!dateString) {
+        return "";
+    }
+
     try {
+
         return new Intl.DateTimeFormat(
             "ar-SA",
             {
-                year: "numeric",
-                month: "numeric",
-                day: "numeric"
+                day: "numeric",
+                month: "short"
             }
         ).format(
-            new Date(value)
+            new Date(dateString)
         );
+
     } catch {
+
         return "";
     }
 }
 
 /* =========================================================
-   MOBILE SIDEBAR
-   ========================================================= */
-
-function setupMobileSidebar() {
-    const openButton =
-        firstElement(
-            "menuButton",
-            "sidebarToggle",
-            "openSidebar"
-        );
-
-    const closeButton =
-        firstElement(
-            "closeSidebar",
-            "closeMenu"
-        );
-
-    if (openButton) {
-        openButton.addEventListener(
-            "click",
-            openMobileSidebar
-        );
-    }
-
-    if (closeButton) {
-        closeButton.addEventListener(
-            "click",
-            closeMobileSidebar
-        );
-    }
-}
-
-function openMobileSidebar() {
-    const sidebar =
-        firstElement(
-            "sidebar",
-            "sideBar"
-        );
-
-    if (sidebar) {
-        sidebar.classList.add(
-            "open"
-        );
-    }
-
-    document.body.classList.add(
-        "sidebar-open"
-    );
-}
-
-function closeMobileSidebar() {
-    const sidebar =
-        firstElement(
-            "sidebar",
-            "sideBar"
-        );
-
-    if (sidebar) {
-        sidebar.classList.remove(
-            "open"
-        );
-    }
-
-    document.body.classList.remove(
-        "sidebar-open"
-    );
-}
-
-/* =========================================================
    SCROLL
-   ========================================================= */
+========================================================= */
 
 function scrollChatToBottom() {
-    const container =
-        firstElement(
-            "messages",
-            "chatMessages",
-            "messagesContainer"
-        );
 
-    if (!container) {
+    const chat = $("chat");
+
+    if (!chat) {
         return;
     }
 
-    requestAnimationFrame(
-        () => {
-            container.scrollTop =
-                container.scrollHeight;
-        }
-    );
+    setTimeout(() => {
+
+        chat.scrollTop =
+            chat.scrollHeight;
+
+    }, 50);
 }
 
 /* =========================================================
-   INPUT RESIZE
-   ========================================================= */
+   TEXTAREA RESIZE
+========================================================= */
 
-function autoResizeInput(
-    event
-) {
+function autoResizeInput(event) {
+
     const input =
-        event &&
-        event.target
-            ? event.target
-            : firstElement(
-                  "messageInput",
-                  "message",
-                  "chatInput",
-                  "userInput"
-              );
+        event?.target ||
+        $("message");
 
     if (!input) {
         return;
@@ -1695,71 +1765,136 @@ function autoResizeInput(
 }
 
 /* =========================================================
-   BUTTON LOADING
-   ========================================================= */
+   MOBILE SIDEBAR
+========================================================= */
 
-function setButtonLoading(
-    button,
-    loading,
-    text
-) {
-    if (!button) {
-        return;
+function setupMobileSidebar() {
+
+    const menuBtn =
+        $("menuBtn");
+
+    const overlay =
+        $("sidebarOverlay");
+
+    if (menuBtn) {
+
+        menuBtn.addEventListener(
+            "click",
+            openMobileSidebar
+        );
     }
 
-    if (
-        loading
-    ) {
-        if (
-            !button.dataset.originalText
-        ) {
-            button.dataset.originalText =
-                button.textContent;
-        }
+    if (overlay) {
 
-        button.disabled =
-            true;
+        overlay.addEventListener(
+            "click",
+            closeMobileSidebar
+        );
+    }
+}
 
-        if (text) {
-            button.textContent =
-                text;
-        }
+function openMobileSidebar() {
 
-    } else {
-        button.disabled =
-            false;
+    const sidebar =
+        document.querySelector(
+            ".sidebar"
+        );
 
-        if (
-            button.dataset.originalText
-        ) {
-            button.textContent =
-                button.dataset.originalText;
+    const overlay =
+        $("sidebarOverlay");
 
-            delete button.dataset
-                .originalText;
-        }
+    if (sidebar) {
+
+        sidebar.classList.add(
+            "open"
+        );
+    }
+
+    if (overlay) {
+
+        overlay.classList.add(
+            "open"
+        );
+    }
+}
+
+function closeMobileSidebar() {
+
+    const sidebar =
+        document.querySelector(
+            ".sidebar"
+        );
+
+    const overlay =
+        $("sidebarOverlay");
+
+    if (sidebar) {
+
+        sidebar.classList.remove(
+            "open"
+        );
+    }
+
+    if (overlay) {
+
+        overlay.classList.remove(
+            "open"
+        );
     }
 }
 
 /* =========================================================
+   EXTRA BUTTONS
+========================================================= */
+
+function setupExtraButtons() {
+
+    /* أي زر قد يكون موجودًا في النسخ المستقبلية */
+
+    document.addEventListener(
+        "keydown",
+        (event) => {
+
+            if (
+                event.key === "Escape"
+            ) {
+
+                closeMobileSidebar();
+            }
+        }
+    );
+}
+
+/* =========================================================
    DEBUG
-   ========================================================= */
+========================================================= */
 
 window.ChatAIPro = {
-    sendMessage,
+
     sendOtp,
     verifyOtp,
+    sendMessage,
     logout,
 
-    getConversations() {
-        return conversations;
-    },
+    showAuth,
+    showApp,
 
-    getCurrentConversation() {
-        return getCurrentConversation();
-    }
+    getState: () => ({
+        authenticated:
+            isAuthenticated(),
+
+        phone:
+            localStorage.getItem(
+                STORAGE_KEYS.phone
+            ),
+
+        conversations:
+            conversations.length,
+
+        currentConversationId
+    })
 };
 
 console.log(
-    "Chat AI Pro frontend loaded successfully."
+    "[Chat AI Pro] Ready."
 );
