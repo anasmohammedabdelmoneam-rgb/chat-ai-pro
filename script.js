@@ -85,16 +85,17 @@ function setupAuthentication() {
     );
 
     const sendOtpButton = firstElement(
-        "sendOtpButton",
-        "sendOTPButton",
-        "continueButton"
-    );
+  "sendOtpBtn",
+  "sendOtpButton",
+  "sendOTPButton",
+  "continueButton"
+);
 
-    const verifyOtpButton = firstElement(
-        "verifyOtpButton",
-        "verifyOTPButton"
-    );
-
+const verifyOtpButton = firstElement(
+  "verifyOtpBtn",
+  "verifyOtpButton",
+  "verifyOTPButton"
+);
     const phoneInput = firstElement(
         "phoneInput",
         "phone"
