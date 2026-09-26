@@ -632,10 +632,111 @@ async function askOpenRouter(message) {
 // ======================================================
 
 app.post("/api/chat", async (req, res) => {
-  const message = String(
-    req.body.message || ""
-  ).trim();
+  console.log("CHAT REQUEST BODY:", req.body);
 
+  let message = "";
+
+  // الطريقة الأساسية
+  if (req.body && typeof req.body.message === "string") {
+    message = req.body.message.trim();
+  }
+
+  // دعم messages إذا أرسلت الواجهة سجل المحادثة
+  if (
+    !message &&
+    req.body &&
+    Array.isArray(req.body.messages)
+  ) {
+    const lastMessage =
+      req.body.messages[req.body.messages.length - 1];
+
+    if (
+      lastMessage &&
+      typeof lastMessage.content === "string"
+    ) {
+      message = lastMessage.content.trim();
+    }
+  }
+
+  // دعم prompt أيضًا
+  if (
+    !message &&
+    req.body &&
+    typeof req.body.prompt === "string"
+  ) {
+    message = req.body.prompt.trim();
+  }
+
+  console.log("CHAT MESSAGE:", message);
+
+  if (!message) {
+    return res.status(400).json({
+      success: false,
+      message: "اكتب رسالة أولًا."
+    });
+  }
+
+  const providers = [];
+
+  if (GEMINI_API_KEY) {
+    providers.push({
+      name: "Gemini",
+      function: () => askGemini(message)
+    });
+  }
+
+  if (GROQ_API_KEY) {
+    providers.push({
+      name: "Groq",
+      function: () => askGroq(message)
+    });
+  }
+
+  if (OPENROUTER_API_KEY) {
+    providers.push({
+      name: "OpenRouter",
+      function: () => askOpenRouter(message)
+    });
+  }
+
+  if (providers.length === 0) {
+    return res.status(500).json({
+      success: false,
+      message: "لا توجد خدمة AI مفعّلة."
+    });
+  }
+
+  for (const provider of providers) {
+    try {
+      console.log(`AI: trying ${provider.name}`);
+
+      const answer =
+        await provider.function();
+
+      console.log(
+        `AI: ${provider.name} succeeded`
+      );
+
+      return res.json({
+        success: true,
+        provider: provider.name,
+        answer: answer
+      });
+
+    } catch (error) {
+      console.error(
+        `AI: ${provider.name} failed:`,
+        error.message
+      );
+    }
+  }
+
+  return res.status(503).json({
+    success: false,
+    message:
+      "جميع خدمات الذكاء الاصطناعي غير متاحة حاليًا. حاول مرة أخرى."
+  });
+});
   if (!message) {
     return res.status(400).json({
       success: false,
