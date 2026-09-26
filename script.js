@@ -1,638 +1,1095 @@
 /* =========================================================
-   CHAT AI PRO
-   Authentication + OTP + Chat + History
-========================================================= */
+   Chat AI Pro - script.js
+   ========================================================= */
 
-
-/* =========================================================
-   AUTH ELEMENTS
-========================================================= */
-
-const authScreen = document.getElementById("authScreen");
-const app = document.getElementById("app");
-
-const phoneStep = document.getElementById("phoneStep");
-const otpStep = document.getElementById("otpStep");
-
-const phoneInput = document.getElementById("phoneInput");
-const otpInput = document.getElementById("otpInput");
-
-const sendOtpBtn = document.getElementById("sendOtpBtn");
-const verifyOtpBtn = document.getElementById("verifyOtpBtn");
-const resendOtpBtn = document.getElementById("resendOtpBtn");
-const backToPhoneBtn = document.getElementById("backToPhoneBtn");
-
-const phoneError = document.getElementById("phoneError");
-const otpError = document.getElementById("otpError");
-
-const sentPhone = document.getElementById("sentPhone");
-
-const authLoading = document.getElementById("authLoading");
-
-const logoutBtn = document.getElementById("logoutBtn");
-const userPhone = document.getElementById("userPhone");
-
+"use strict";
 
 /* =========================================================
-   CHAT ELEMENTS
-========================================================= */
+   CONFIG
+   ========================================================= */
 
-const chat = document.getElementById("chat");
-const welcome = document.getElementById("welcome");
-
-const messageInput = document.getElementById("message");
-const sendBtn = document.getElementById("sendBtn");
-
-const clearBtn = document.getElementById("clearBtn");
-const newChatBtn = document.getElementById("newChatBtn");
-
-const conversationList =
-    document.getElementById("conversationList");
-
-const menuBtn =
-    document.getElementById("menuBtn");
-
-const sidebar =
-    document.querySelector(".sidebar");
-
-const sidebarOverlay =
-    document.getElementById("sidebarOverlay");
-
+const API_BASE = "";
 
 /* =========================================================
    STORAGE
-========================================================= */
+   ========================================================= */
 
-const CONVERSATIONS_KEY =
-    "chat_ai_pro_conversations";
-
-const AUTH_KEY =
-    "chat_ai_pro_auth";
-
+const STORAGE_KEYS = {
+    authenticated: "chat_ai_pro_authenticated",
+    phone: "chat_ai_pro_phone",
+    conversations: "chat_ai_pro_conversations",
+    currentConversation: "chat_ai_pro_current_conversation"
+};
 
 /* =========================================================
    STATE
-========================================================= */
+   ========================================================= */
 
-let conversations = [];
-
-let currentConversationId = null;
-
-let isSending = false;
+let conversations = loadConversations();
+let currentConversationId =
+    localStorage.getItem(
+        STORAGE_KEYS.currentConversation
+    ) || null;
 
 let pendingPhone = "";
-
+let isSending = false;
 
 /* =========================================================
-   BASIC HELPERS
-========================================================= */
+   DOM HELPERS
+   ========================================================= */
 
-function createId() {
-
-    return (
-        Date.now().toString(36) +
-        Math.random().toString(36).substring(2, 9)
-    );
-
+function $(id) {
+    return document.getElementById(id);
 }
 
+function firstElement(...ids) {
+    for (const id of ids) {
+        const element = $(id);
 
-function getDate() {
-
-    return new Date().toLocaleString(
-        "ar-SA",
-        {
-            dateStyle: "short",
-            timeStyle: "short"
+        if (element) {
+            return element;
         }
-    );
+    }
 
+    return null;
 }
-
 
 /* =========================================================
-   PHONE
-========================================================= */
+   INITIALIZATION
+   ========================================================= */
 
-function normalizeSaudiPhone(value) {
+document.addEventListener("DOMContentLoaded", () => {
+    setupAuthentication();
+    setupChat();
 
-    let phone = String(value || "")
-        .replace(/\s+/g, "")
-        .replace(/-/g, "");
-
-    if (phone.startsWith("+966")) {
-
-        phone = phone.substring(4);
-
-    } else if (phone.startsWith("00966")) {
-
-        phone = phone.substring(5);
-
-    } else if (phone.startsWith("966")) {
-
-        phone = phone.substring(3);
-
-    } else if (phone.startsWith("05")) {
-
-        phone = phone.substring(1);
-
+    if (isAuthenticated()) {
+        showApp();
+        initializeChat();
+    } else {
+        showAuth();
     }
-
-    return phone;
-
-}
-
-
-function isValidSaudiPhone(phone) {
-
-    return /^5\d{8}$/.test(phone);
-
-}
-
-
-function fullSaudiPhone(phone) {
-
-    return "+966" + phone;
-
-}
-
+});
 
 /* =========================================================
-   AUTH UI
-========================================================= */
+   AUTHENTICATION
+   ========================================================= */
 
-function showLoading(show, text = "جارٍ التحقق...") {
-
-    if (!authLoading) return;
-
-    const span =
-        authLoading.querySelector("span");
-
-    if (span) {
-        span.textContent = text;
-    }
-
-    authLoading.classList.toggle(
-        "hidden",
-        !show
+function setupAuthentication() {
+    const phoneForm = firstElement(
+        "phoneForm",
+        "loginForm"
     );
 
-}
+    const otpForm = firstElement(
+        "otpForm"
+    );
 
+    const sendOtpButton = firstElement(
+        "sendOtpButton",
+        "sendOTPButton",
+        "continueButton"
+    );
 
-function setAuthButtonsDisabled(disabled) {
+    const verifyOtpButton = firstElement(
+        "verifyOtpButton",
+        "verifyOTPButton"
+    );
 
-    if (sendOtpBtn) {
-        sendOtpBtn.disabled = disabled;
+    const phoneInput = firstElement(
+        "phoneInput",
+        "phone"
+    );
+
+    const otpInput = firstElement(
+        "otpInput",
+        "otp"
+    );
+
+    if (phoneForm) {
+        phoneForm.addEventListener(
+            "submit",
+            (event) => {
+                event.preventDefault();
+
+                sendOtp();
+            }
+        );
     }
 
-    if (verifyOtpBtn) {
-        verifyOtpBtn.disabled = disabled;
+    if (otpForm) {
+        otpForm.addEventListener(
+            "submit",
+            (event) => {
+                event.preventDefault();
+
+                verifyOtp();
+            }
+        );
     }
 
-    if (resendOtpBtn) {
-        resendOtpBtn.disabled = disabled;
+    if (sendOtpButton) {
+        sendOtpButton.addEventListener(
+            "click",
+            (event) => {
+                if (
+                    sendOtpButton.tagName !==
+                    "BUTTON" ||
+                    sendOtpButton.type !==
+                    "submit"
+                ) {
+                    event.preventDefault();
+
+                    sendOtp();
+                }
+            }
+        );
     }
 
+    if (verifyOtpButton) {
+        verifyOtpButton.addEventListener(
+            "click",
+            (event) => {
+                if (
+                    verifyOtpButton.tagName !==
+                    "BUTTON" ||
+                    verifyOtpButton.type !==
+                    "submit"
+                ) {
+                    event.preventDefault();
+
+                    verifyOtp();
+                }
+            }
+        );
+    }
+
+    if (phoneInput) {
+        phoneInput.addEventListener(
+            "input",
+            () => {
+                phoneInput.value =
+                    phoneInput.value.replace(
+                        /[^\d+]/g,
+                        ""
+                    );
+            }
+        );
+
+        phoneInput.addEventListener(
+            "keydown",
+            (event) => {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+
+                    sendOtp();
+                }
+            }
+        );
+    }
+
+    if (otpInput) {
+        otpInput.addEventListener(
+            "input",
+            () => {
+                otpInput.value =
+                    otpInput.value.replace(
+                        /\D/g,
+                        ""
+                    );
+            }
+        );
+
+        otpInput.addEventListener(
+            "keydown",
+            (event) => {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+
+                    verifyOtp();
+                }
+            }
+        );
+    }
+
+    const logoutButton = firstElement(
+        "logoutButton",
+        "logoutBtn"
+    );
+
+    if (logoutButton) {
+        logoutButton.addEventListener(
+            "click",
+            logout
+        );
+    }
+
+    const backButton = firstElement(
+        "backToPhone",
+        "backButton"
+    );
+
+    if (backButton) {
+        backButton.addEventListener(
+            "click",
+            showPhoneStep
+        );
+    }
 }
-
-
-function showPhoneStep() {
-
-    phoneStep.classList.remove("hidden");
-
-    otpStep.classList.add("hidden");
-
-    phoneError.textContent = "";
-
-    otpError.textContent = "";
-
-    showLoading(false);
-
-}
-
-
-function showOtpStep(phone) {
-
-    phoneStep.classList.add("hidden");
-
-    otpStep.classList.remove("hidden");
-
-    phoneError.textContent = "";
-
-    otpError.textContent = "";
-
-    sentPhone.textContent =
-        fullSaudiPhone(phone);
-
-    otpInput.value = "";
-
-    otpInput.focus();
-
-    showLoading(false);
-
-}
-
 
 /* =========================================================
-   AUTH STORAGE
-========================================================= */
+   PHONE NORMALIZATION
+   ========================================================= */
 
-function saveAuth(phone) {
-
-    localStorage.setItem(
-        AUTH_KEY,
-        JSON.stringify({
-            authenticated: true,
-            phone: phone,
-            loginAt: Date.now()
-        })
-    );
-
-}
-
-
-function getAuth() {
-
-    try {
-
-        const data =
-            localStorage.getItem(AUTH_KEY);
-
-        if (!data) {
-            return null;
-        }
-
-        return JSON.parse(data);
-
-    } catch {
-
+function normalizeSaudiPhone(phone) {
+    if (!phone) {
         return null;
-
     }
 
-}
+    let value =
+        String(phone).trim();
 
+    value =
+        value.replace(
+            /[\s\-()]/g,
+            ""
+        );
 
-function clearAuth() {
-
-    localStorage.removeItem(AUTH_KEY);
-
-}
-
-
-/* =========================================================
-   SHOW APP
-========================================================= */
-
-function enterApp(phone) {
-
-    saveAuth(phone);
-
-    authScreen.classList.add("hidden");
-
-    app.classList.remove("hidden");
-
-    userPhone.textContent =
-        fullSaudiPhone(phone);
-
-    loadConversations();
-
-    if (!currentConversationId) {
-        createNewConversation();
+    if (/^05\d{8}$/.test(value)) {
+        return (
+            "+966" +
+            value.substring(1)
+        );
     }
 
+    if (/^5\d{8}$/.test(value)) {
+        return (
+            "+966" +
+            value
+        );
+    }
+
+    if (/^9665\d{8}$/.test(value)) {
+        return (
+            "+" +
+            value
+        );
+    }
+
+    if (/^\+9665\d{8}$/.test(value)) {
+        return value;
+    }
+
+    return null;
 }
-
-
-function logout() {
-
-    clearAuth();
-
-    conversations = [];
-
-    currentConversationId = null;
-
-    authScreen.classList.remove("hidden");
-
-    app.classList.add("hidden");
-
-    phoneInput.value = "";
-
-    otpInput.value = "";
-
-    pendingPhone = "";
-
-    showPhoneStep();
-
-}
-
 
 /* =========================================================
    SEND OTP
-========================================================= */
+   ========================================================= */
 
 async function sendOtp() {
+    if (isSending) {
+        return;
+    }
 
-    phoneError.textContent = "";
+    const phoneInput =
+        firstElement(
+            "phoneInput",
+            "phone"
+        );
+
+    if (!phoneInput) {
+        showAuthError(
+            "لم يتم العثور على خانة رقم الجوال."
+        );
+
+        return;
+    }
 
     const phone =
         normalizeSaudiPhone(
             phoneInput.value
         );
 
-    if (!isValidSaudiPhone(phone)) {
-
-        phoneError.textContent =
-            "أدخل رقم جوال سعودي صحيح مثل 5XXXXXXXX.";
+    if (!phone) {
+        showAuthError(
+            "أدخل رقم جوال سعودي صحيح."
+        );
 
         return;
-
     }
 
     pendingPhone = phone;
 
-    setAuthButtonsDisabled(true);
+    const button =
+        firstElement(
+            "sendOtpButton",
+            "sendOTPButton",
+            "continueButton"
+        );
 
-    showLoading(
+    setButtonLoading(
+        button,
         true,
-        "جارٍ إرسال رمز التحقق..."
+        "جارٍ الإرسال..."
     );
 
-    try {
+    clearAuthError();
 
+    try {
         const response =
             await fetch(
-                "/api/auth/send-otp",
+                `${API_BASE}/api/auth/send-otp`,
                 {
                     method: "POST",
 
                     headers: {
                         "Content-Type":
+                            "application/json",
+                        "Accept":
                             "application/json"
                     },
 
                     body: JSON.stringify({
-                        method: "sms",
-                        phone: fullSaudiPhone(phone)
+                        phone: phone
                     })
                 }
             );
 
-        let data = {};
-
-        try {
-            data = await response.json();
-        } catch {
-            data = {};
-        }
-
-        if (!response.ok) {
-
-            throw new Error(
-                data.error ||
-                data.message ||
-                "تعذر إرسال رمز التحقق."
+        const data =
+            await parseJsonResponse(
+                response
             );
 
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+            throw new Error(
+                data.message ||
+                "تعذر إرسال رمز التحقق عبر WhatsApp."
+            );
         }
 
-        /*
-         * Authentica may return different success
-         * structures depending on the API response.
-         * The HTTP success response is enough here.
-         */
+        showOtpStep();
 
-        showOtpStep(phone);
+        showAuthMessage(
+            "تم إرسال رمز التحقق إلى WhatsApp."
+        );
 
     } catch (error) {
-
         console.error(
             "Send OTP error:",
             error
         );
 
-        phoneError.textContent =
+        showAuthError(
             error.message ||
-            "حدث خطأ أثناء إرسال الرمز.";
-
-        showLoading(false);
+            "حدث خطأ أثناء إرسال رمز التحقق."
+        );
 
     } finally {
-
-        setAuthButtonsDisabled(false);
-
+        setButtonLoading(
+            button,
+            false,
+            "إرسال الرمز"
+        );
     }
-
 }
-
 
 /* =========================================================
    VERIFY OTP
-========================================================= */
+   ========================================================= */
 
 async function verifyOtp() {
+    if (isSending) {
+        return;
+    }
 
-    otpError.textContent = "";
+    const otpInput =
+        firstElement(
+            "otpInput",
+            "otp"
+        );
+
+    if (!otpInput) {
+        showAuthError(
+            "لم يتم العثور على خانة رمز التحقق."
+        );
+
+        return;
+    }
 
     const otp =
         String(
             otpInput.value || ""
-        ).replace(/\D/g, "");
-
-    if (!pendingPhone) {
-
-        otpError.textContent =
-            "أعد إدخال رقم الجوال.";
-
-        showPhoneStep();
-
-        return;
-
-    }
+        ).trim();
 
     if (!/^\d{4,8}$/.test(otp)) {
-
-        otpError.textContent =
-            "أدخل رمز التحقق الصحيح.";
+        showAuthError(
+            "أدخل رمز التحقق بشكل صحيح."
+        );
 
         return;
-
     }
 
-    setAuthButtonsDisabled(true);
+    if (!pendingPhone) {
+        showPhoneStep();
 
-    showLoading(
+        showAuthError(
+            "أدخل رقم الجوال أولًا."
+        );
+
+        return;
+    }
+
+    const button =
+        firstElement(
+            "verifyOtpButton",
+            "verifyOTPButton"
+        );
+
+    setButtonLoading(
+        button,
         true,
-        "جارٍ التحقق من الرمز..."
+        "جارٍ التحقق..."
     );
 
-    try {
+    clearAuthError();
 
+    try {
         const response =
             await fetch(
-                "/api/auth/verify-otp",
+                `${API_BASE}/api/auth/verify-otp`,
                 {
                     method: "POST",
 
                     headers: {
                         "Content-Type":
+                            "application/json",
+                        "Accept":
                             "application/json"
                     },
 
                     body: JSON.stringify({
                         phone:
-                            fullSaudiPhone(
-                                pendingPhone
-                            ),
-
+                            pendingPhone,
                         otp: otp
                     })
                 }
             );
 
-        let data = {};
+        const data =
+            await parseJsonResponse(
+                response
+            );
 
-        try {
-            data = await response.json();
-        } catch {
-            data = {};
-        }
-
-        if (!response.ok) {
-
+        if (
+            !response.ok ||
+            !data.success
+        ) {
             throw new Error(
-                data.error ||
                 data.message ||
                 "رمز التحقق غير صحيح."
             );
-
         }
 
-        /*
-         * Some API responses use different fields
-         * for successful verification.
-         *
-         * If the backend returned HTTP 200,
-         * we treat the verification as successful.
-         */
+        localStorage.setItem(
+            STORAGE_KEYS.authenticated,
+            "true"
+        );
 
-        enterApp(pendingPhone);
+        localStorage.setItem(
+            STORAGE_KEYS.phone,
+            pendingPhone
+        );
 
-        showLoading(false);
+        showApp();
+
+        initializeChat();
 
     } catch (error) {
-
         console.error(
             "Verify OTP error:",
             error
         );
 
-        otpError.textContent =
+        showAuthError(
             error.message ||
-            "تعذر التحقق من الرمز.";
-
-        showLoading(false);
-
-    } finally {
-
-        setAuthButtonsDisabled(false);
-
-    }
-
-}
-
-
-/* =========================================================
-   RESEND OTP
-========================================================= */
-
-async function resendOtp() {
-
-    if (!pendingPhone) {
-
-        showPhoneStep();
-
-        return;
-
-    }
-
-    phoneInput.value =
-        pendingPhone;
-
-    await sendOtp();
-
-}
-
-
-/* =========================================================
-   CONVERSATIONS
-========================================================= */
-
-function saveConversations() {
-
-    try {
-
-        localStorage.setItem(
-            CONVERSATIONS_KEY,
-            JSON.stringify(conversations)
+            "حدث خطأ أثناء التحقق."
         );
 
+    } finally {
+        setButtonLoading(
+            button,
+            false,
+            "تحقق"
+        );
+    }
+}
+
+/* =========================================================
+   AUTH UI
+   ========================================================= */
+
+function showAuth() {
+    const authScreen =
+        firstElement(
+            "authScreen",
+            "loginScreen",
+            "auth"
+        );
+
+    const appScreen =
+        firstElement(
+            "appScreen",
+            "chatApp",
+            "app"
+        );
+
+    if (authScreen) {
+        authScreen.style.display =
+            "";
+    }
+
+    if (appScreen) {
+        appScreen.style.display =
+            "none";
+    }
+}
+
+function showApp() {
+    const authScreen =
+        firstElement(
+            "authScreen",
+            "loginScreen",
+            "auth"
+        );
+
+    const appScreen =
+        firstElement(
+            "appScreen",
+            "chatApp",
+            "app"
+        );
+
+    if (authScreen) {
+        authScreen.style.display =
+            "none";
+    }
+
+    if (appScreen) {
+        appScreen.style.display =
+            "";
+    }
+}
+
+function showPhoneStep() {
+    const phoneStep =
+        firstElement(
+            "phoneStep",
+            "loginStep"
+        );
+
+    const otpStep =
+        firstElement(
+            "otpStep"
+        );
+
+    if (phoneStep) {
+        phoneStep.style.display =
+            "";
+    }
+
+    if (otpStep) {
+        otpStep.style.display =
+            "none";
+    }
+
+    clearAuthError();
+}
+
+function showOtpStep() {
+    const phoneStep =
+        firstElement(
+            "phoneStep",
+            "loginStep"
+        );
+
+    const otpStep =
+        firstElement(
+            "otpStep"
+        );
+
+    if (phoneStep) {
+        phoneStep.style.display =
+            "none";
+    }
+
+    if (otpStep) {
+        otpStep.style.display =
+            "";
+    }
+
+    const otpInput =
+        firstElement(
+            "otpInput",
+            "otp"
+        );
+
+    if (otpInput) {
+        setTimeout(
+            () => otpInput.focus(),
+            100
+        );
+    }
+}
+
+function showAuthError(message) {
+    const element =
+        firstElement(
+            "authError",
+            "loginError",
+            "errorMessage"
+        );
+
+    if (!element) {
+        alert(message);
+        return;
+    }
+
+    element.textContent =
+        message;
+
+    element.style.display =
+        "";
+}
+
+function showAuthMessage(message) {
+    const element =
+        firstElement(
+            "authMessage",
+            "loginMessage",
+            "successMessage"
+        );
+
+    if (element) {
+        element.textContent =
+            message;
+
+        element.style.display =
+            "";
+    }
+}
+
+function clearAuthError() {
+    const element =
+        firstElement(
+            "authError",
+            "loginError",
+            "errorMessage"
+        );
+
+    if (element) {
+        element.textContent = "";
+
+        element.style.display =
+            "none";
+    }
+}
+
+/* =========================================================
+   LOGOUT
+   ========================================================= */
+
+function logout() {
+    localStorage.removeItem(
+        STORAGE_KEYS.authenticated
+    );
+
+    localStorage.removeItem(
+        STORAGE_KEYS.phone
+    );
+
+    pendingPhone = "";
+
+    showAuth();
+    showPhoneStep();
+}
+
+/* =========================================================
+   AUTH STATE
+   ========================================================= */
+
+function isAuthenticated() {
+    return (
+        localStorage.getItem(
+            STORAGE_KEYS.authenticated
+        ) === "true"
+    );
+}
+
+/* =========================================================
+   CHAT SETUP
+   ========================================================= */
+
+function setupChat() {
+    const sendButton =
+        firstElement(
+            "sendButton",
+            "sendBtn",
+            "submitButton"
+        );
+
+    const messageInput =
+        firstElement(
+            "messageInput",
+            "message",
+            "chatInput",
+            "userInput"
+        );
+
+    if (sendButton) {
+        sendButton.addEventListener(
+            "click",
+            (event) => {
+                event.preventDefault();
+
+                sendMessage();
+            }
+        );
+    }
+
+    if (messageInput) {
+        messageInput.addEventListener(
+            "keydown",
+            (event) => {
+                if (
+                    event.key === "Enter" &&
+                    !event.shiftKey
+                ) {
+                    event.preventDefault();
+
+                    sendMessage();
+                }
+            }
+        );
+
+        messageInput.addEventListener(
+            "input",
+            autoResizeInput
+        );
+    }
+
+    const newChatButton =
+        firstElement(
+            "newChatButton",
+            "newChat",
+            "newConversation"
+        );
+
+    if (newChatButton) {
+        newChatButton.addEventListener(
+            "click",
+            createNewConversation
+        );
+    }
+
+    setupMobileSidebar();
+}
+
+/* =========================================================
+   SEND MESSAGE
+   ========================================================= */
+
+async function sendMessage() {
+    if (isSending) {
+        return;
+    }
+
+    const input =
+        firstElement(
+            "messageInput",
+            "message",
+            "chatInput",
+            "userInput"
+        );
+
+    if (!input) {
+        console.error(
+            "Chat input not found."
+        );
+
+        return;
+    }
+
+    const message =
+        String(
+            input.value || ""
+        ).trim();
+
+    if (!message) {
+        return;
+    }
+
+    if (!isAuthenticated()) {
+        showAuth();
+
+        return;
+    }
+
+    isSending = true;
+
+    const sendButton =
+        firstElement(
+            "sendButton",
+            "sendBtn",
+            "submitButton"
+        );
+
+    input.value = "";
+
+    autoResizeInput({
+        target: input
+    });
+
+    // Create conversation if necessary
+    if (!currentConversationId) {
+        createNewConversation(
+            false
+        );
+    }
+
+    // User message
+    addMessageToCurrentConversation(
+        "user",
+        message
+    );
+
+    renderMessages();
+
+    scrollChatToBottom();
+
+    setButtonLoading(
+        sendButton,
+        true,
+        "..."
+    );
+
+    const typingElement =
+        addTypingIndicator();
+
+    try {
+        /*
+         * IMPORTANT:
+         *
+         * The server expects:
+         *
+         * {
+         *     "message": "..."
+         * }
+         *
+         * This fixes the previous
+         * "اكتب رسالة أولاً" problem.
+         */
+
+        const response =
+            await fetch(
+                `${API_BASE}/api/chat`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+
+                        "Accept":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        message:
+                            message
+                    })
+                }
+            );
+
+        const data =
+            await parseJsonResponse(
+                response
+            );
+
+        removeTypingIndicator(
+            typingElement
+        );
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+            throw new Error(
+                data.message ||
+                "حدث خطأ أثناء الاتصال بالذكاء الاصطناعي."
+            );
+        }
+
+        const answer =
+            data.answer ||
+            data.response ||
+            data.message;
+
+        if (!answer) {
+            throw new Error(
+                "لم يصل رد من الذكاء الاصطناعي."
+            );
+        }
+
+        addMessageToCurrentConversation(
+            "assistant",
+            answer,
+            data.provider
+        );
+
+        saveConversations();
+
+        renderMessages();
+
+        renderConversationList();
+
+        scrollChatToBottom();
+
     } catch (error) {
+        removeTypingIndicator(
+            typingElement
+        );
 
         console.error(
-            "Save conversations error:",
+            "Chat error:",
             error
         );
 
-    }
+        addMessageToCurrentConversation(
+            "error",
+            error.message ||
+            "حدث خطأ أثناء الاتصال بالخادم."
+        );
 
+        saveConversations();
+
+        renderMessages();
+
+        scrollChatToBottom();
+
+    } finally {
+        isSending = false;
+
+        setButtonLoading(
+            sendButton,
+            false,
+            ""
+        );
+
+        input.focus();
+    }
 }
 
+/* =========================================================
+   PARSE JSON
+   ========================================================= */
 
-function loadConversations() {
+async function parseJsonResponse(
+    response
+) {
+    const text =
+        await response.text();
+
+    if (!text) {
+        return {};
+    }
 
     try {
-
-        const data =
-            localStorage.getItem(
-                CONVERSATIONS_KEY
-            );
-
-        conversations =
-            data
-                ? JSON.parse(data)
-                : [];
-
-        if (!Array.isArray(conversations)) {
-            conversations = [];
-        }
-
+        return JSON.parse(text);
     } catch {
-
-        conversations = [];
-
+        return {
+            success: false,
+            message: text
+        };
     }
-
-    renderConversationList();
-
 }
 
+/* =========================================================
+   CONVERSATIONS
+   ========================================================= */
 
-function createNewConversation() {
+function loadConversations() {
+    try {
+        const saved =
+            localStorage.getItem(
+                STORAGE_KEYS.conversations
+            );
 
+        if (!saved) {
+            return [];
+        }
+
+        const parsed =
+            JSON.parse(saved);
+
+        return Array.isArray(parsed)
+            ? parsed
+            : [];
+
+    } catch (error) {
+        console.error(
+            "Could not load conversations:",
+            error
+        );
+
+        return [];
+    }
+}
+
+function saveConversations() {
+    try {
+        localStorage.setItem(
+            STORAGE_KEYS.conversations,
+            JSON.stringify(
+                conversations
+            )
+        );
+
+        if (currentConversationId) {
+            localStorage.setItem(
+                STORAGE_KEYS.currentConversation,
+                currentConversationId
+            );
+        }
+
+    } catch (error) {
+        console.error(
+            "Could not save conversations:",
+            error
+        );
+    }
+}
+
+function createNewConversation(
+    render = true
+) {
     const conversation = {
-
-        id: createId(),
+        id:
+            "conversation_" +
+            Date.now() +
+            "_" +
+            Math.random()
+                .toString(36)
+                .substring(2, 8),
 
         title: "محادثة جديدة",
 
-        createdAt: Date.now(),
-
-        updatedAt: Date.now(),
+        createdAt:
+            new Date().toISOString(),
 
         messages: []
-
     };
 
     conversations.unshift(
@@ -644,34 +1101,82 @@ function createNewConversation() {
 
     saveConversations();
 
-    renderConversationList();
+    if (render) {
+        renderMessages();
+        renderConversationList();
+    }
 
-    renderCurrentConversation();
+    closeMobileSidebar();
 
-    closeSidebar();
-
+    return conversation;
 }
 
-
 function getCurrentConversation() {
-
     return conversations.find(
-        conversation =>
+        (conversation) =>
             conversation.id ===
             currentConversationId
     );
-
 }
 
+function addMessageToCurrentConversation(
+    role,
+    content,
+    provider = null
+) {
+    let conversation =
+        getCurrentConversation();
+
+    if (!conversation) {
+        conversation =
+            createNewConversation(
+                false
+            );
+    }
+
+    conversation.messages.push({
+        id:
+            "message_" +
+            Date.now() +
+            "_" +
+            Math.random()
+                .toString(36)
+                .substring(2, 8),
+
+        role: role,
+
+        content: content,
+
+        provider: provider,
+
+        timestamp:
+            new Date().toISOString()
+    });
+
+    // Automatically create title
+    if (
+        role === "user" &&
+        conversation.title ===
+            "محادثة جديدة"
+    ) {
+        conversation.title =
+            makeConversationTitle(
+                content
+            );
+    }
+
+    saveConversations();
+}
 
 /* =========================================================
    CONVERSATION TITLE
-========================================================= */
+   ========================================================= */
 
-function generateTitle(text) {
-
+function makeConversationTitle(
+    text
+) {
     const clean =
-        String(text || "")
+        String(text)
             .replace(/\s+/g, " ")
             .trim();
 
@@ -679,1315 +1184,581 @@ function generateTitle(text) {
         return "محادثة جديدة";
     }
 
-    if (clean.length <= 30) {
+    if (clean.length <= 28) {
         return clean;
     }
 
-    return clean.substring(0, 30) + "...";
-
-}
-
-
-/* =========================================================
-   RENDER HISTORY
-========================================================= */
-
-function renderConversationList() {
-
-    if (!conversationList) return;
-
-    conversationList.innerHTML = "";
-
-    if (conversations.length === 0) {
-
-        conversationList.innerHTML =
-            `
-            <div class="empty-history">
-                لا توجد محادثات حتى الآن.
-                <br>
-                ابدأ محادثة جديدة.
-            </div>
-            `;
-
-        return;
-
-    }
-
-    conversations.forEach(
-        conversation => {
-
-            const item =
-                document.createElement("div");
-
-            item.className =
-                "conversation-item";
-
-            if (
-                conversation.id ===
-                currentConversationId
-            ) {
-
-                item.classList.add(
-                    "active"
-                );
-
-            }
-
-            const main =
-                document.createElement("div");
-
-            main.className =
-                "conversation-main";
-
-            const title =
-                document.createElement("div");
-
-            title.className =
-                "conversation-title";
-
-            title.textContent =
-                conversation.title ||
-                "محادثة جديدة";
-
-            const date =
-                document.createElement("div");
-
-            date.className =
-                "conversation-date";
-
-            date.textContent =
-                conversation.updatedAt
-                    ? new Date(
-                        conversation.updatedAt
-                    ).toLocaleDateString(
-                        "ar-SA"
-                    )
-                    : "";
-
-            main.appendChild(title);
-            main.appendChild(date);
-
-
-            const actions =
-                document.createElement("div");
-
-            actions.className =
-                "conversation-actions";
-
-
-            const rename =
-                document.createElement("button");
-
-            rename.type = "button";
-
-            rename.title =
-                "إعادة تسمية";
-
-            rename.textContent = "✎";
-
-            rename.addEventListener(
-                "click",
-                event => {
-
-                    event.stopPropagation();
-
-                    renameConversation(
-                        conversation.id
-                    );
-
-                }
-            );
-
-
-            const deleteBtn =
-                document.createElement("button");
-
-            deleteBtn.type = "button";
-
-            deleteBtn.title =
-                "حذف";
-
-            deleteBtn.textContent = "×";
-
-            deleteBtn.addEventListener(
-                "click",
-                event => {
-
-                    event.stopPropagation();
-
-                    deleteConversation(
-                        conversation.id
-                    );
-
-                }
-            );
-
-
-            actions.appendChild(rename);
-            actions.appendChild(deleteBtn);
-
-
-            item.appendChild(main);
-            item.appendChild(actions);
-
-
-            item.addEventListener(
-                "click",
-                () => {
-
-                    currentConversationId =
-                        conversation.id;
-
-                    saveConversations();
-
-                    renderConversationList();
-
-                    renderCurrentConversation();
-
-                    closeSidebar();
-
-                }
-            );
-
-
-            conversationList.appendChild(item);
-
-        }
+    return (
+        clean.substring(0, 28) +
+        "..."
     );
-
 }
 
-
 /* =========================================================
-   RENAME
-========================================================= */
+   INITIALIZE CHAT
+   ========================================================= */
 
-function renameConversation(id) {
-
-    const conversation =
-        conversations.find(
-            item =>
-                item.id === id
-        );
-
-    if (!conversation) return;
-
-    const newTitle =
-        window.prompt(
-            "اكتب اسم المحادثة:",
-            conversation.title
-        );
-
-    if (
-        newTitle === null ||
-        !newTitle.trim()
-    ) {
-        return;
-    }
-
-    conversation.title =
-        newTitle.trim();
-
-    conversation.updatedAt =
-        Date.now();
-
-    saveConversations();
-
-    renderConversationList();
-
-}
-
-
-/* =========================================================
-   DELETE
-========================================================= */
-
-function deleteConversation(id) {
-
-    const conversation =
-        conversations.find(
-            item =>
-                item.id === id
-        );
-
-    if (!conversation) return;
-
-    const confirmed =
-        window.confirm(
-            "هل تريد حذف هذه المحادثة؟"
-        );
-
-    if (!confirmed) return;
-
+function initializeChat() {
     conversations =
-        conversations.filter(
-            item =>
-                item.id !== id
-        );
+        loadConversations();
+
+    currentConversationId =
+        localStorage.getItem(
+            STORAGE_KEYS.currentConversation
+        ) || null;
 
     if (
-        currentConversationId === id
+        !currentConversationId ||
+        !getCurrentConversation()
     ) {
-
-        currentConversationId =
-            null;
-
-        if (conversations.length > 0) {
-
+        if (conversations.length) {
             currentConversationId =
                 conversations[0].id;
-
         } else {
-
-            createNewConversation();
-
-            return;
-
+            createNewConversation(
+                false
+            );
         }
-
     }
 
     saveConversations();
 
+    renderMessages();
+
     renderConversationList();
-
-    renderCurrentConversation();
-
 }
-
 
 /* =========================================================
-   MARKDOWN
-========================================================= */
+   RENDER MESSAGES
+   ========================================================= */
 
-function escapeHTML(value) {
-
-    return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-
-}
-
-
-function markdownToHTML(text) {
-
-    text = String(text ?? "");
-
-    /*
-     * Fix literal <br> returned by some AI providers.
-     */
-
-    text = text
-        .replace(
-            /<br\s*\/?>/gi,
-            "\n"
-        )
-        .replace(
-            /<\/br>/gi,
-            "\n"
+function renderMessages() {
+    const container =
+        firstElement(
+            "messages",
+            "chatMessages",
+            "messagesContainer"
         );
 
+    if (!container) {
+        console.warn(
+            "Messages container not found."
+        );
 
-    const codeBlocks = [];
+        return;
+    }
 
-    text = text.replace(
-        /```([\s\S]*?)```/g,
-        function(_, code) {
+    container.innerHTML = "";
 
-            const index =
-                codeBlocks.length;
+    const conversation =
+        getCurrentConversation();
 
-            codeBlocks.push(
-                escapeHTML(
-                    code
-                        .replace(
-                            /^\w+\n/,
-                            ""
-                        )
-                        .trim()
-                )
+    if (
+        !conversation ||
+        conversation.messages.length ===
+            0
+    ) {
+        return;
+    }
+
+    for (
+        const message of
+        conversation.messages
+    ) {
+        const element =
+            createMessageElement(
+                message
             );
 
-            return `@@CODEBLOCK${index}@@`;
+        container.appendChild(
+            element
+        );
+    }
 
-        }
+    scrollChatToBottom();
+}
+
+/* =========================================================
+   CREATE MESSAGE ELEMENT
+   ========================================================= */
+
+function createMessageElement(
+    message
+) {
+    const wrapper =
+        document.createElement(
+            "div"
+        );
+
+    wrapper.className =
+        "message " +
+        (
+            message.role ===
+            "user"
+                ? "user-message"
+                : message.role ===
+                  "error"
+                ? "error-message"
+                : "assistant-message"
+        );
+
+    const bubble =
+        document.createElement(
+            "div"
+        );
+
+    bubble.className =
+        "message-bubble";
+
+    if (
+        message.role ===
+        "assistant"
+    ) {
+        bubble.innerHTML =
+            formatAIText(
+                message.content
+            );
+    } else {
+        bubble.textContent =
+            message.content;
+    }
+
+    wrapper.appendChild(
+        bubble
     );
 
+    return wrapper;
+}
 
-    text =
-        escapeHTML(text);
+/* =========================================================
+   SIMPLE MARKDOWN FORMATTER
+   ========================================================= */
 
+function escapeHTML(text) {
+    return String(text)
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+}
 
-    text =
-        text.replace(
-            /`([^`]+)`/g,
-            "<code>$1</code>"
+function formatAIText(text) {
+    let html =
+        escapeHTML(
+            text || ""
         );
 
-
-    text =
-        text.replace(
-            /^### (.*)$/gm,
-            "<h3>$1</h3>"
+    // Code blocks
+    html =
+        html.replace(
+            /```([\s\S]*?)```/g,
+            "<pre><code>$1</code></pre>"
         );
 
-
-    text =
-        text.replace(
-            /^## (.*)$/gm,
-            "<h2>$1</h2>"
-        );
-
-
-    text =
-        text.replace(
-            /^# (.*)$/gm,
-            "<h1>$1</h1>"
-        );
-
-
-    text =
-        text.replace(
+    // Bold
+    html =
+        html.replace(
             /\*\*(.*?)\*\*/g,
             "<strong>$1</strong>"
         );
 
-
-    text =
-        text.replace(
-            /__(.*?)__/g,
-            "<strong>$1</strong>"
+    // Inline code
+    html =
+        html.replace(
+            /`([^`]+)`/g,
+            "<code>$1</code>"
         );
 
-
-    text =
-        text.replace(
-            /\*([^*\n]+)\*/g,
-            "<em>$1</em>"
-        );
-
-
-    text =
-        text.replace(
-            /_([^_\n]+)_/g,
-            "<em>$1</em>"
-        );
-
-
-    text =
-        text.replace(
-            /^[-*] (.*)$/gm,
-            "<li>$1</li>"
-        );
-
-
-    text =
-        text.replace(
-            /(<li>.*<\/li>)/gs,
-            "<ul>$1</ul>"
-        );
-
-
-    text =
-        text.replace(
-            /^\d+\. (.*)$/gm,
-            "<li>$1</li>"
-        );
-
-
-    text =
-        text.replace(
-            /(<li>.*<\/li>)/gs,
-            function(match) {
-
-                if (
-                    match.includes("<ul>")
-                ) {
-                    return match;
-                }
-
-                return `<ol>${match}</ol>`;
-
-            }
-        );
-
-
-    text =
-        text.replace(
-            /^---$/gm,
-            "<hr>"
-        );
-
-
-    text =
-        text.replace(
+    // New lines
+    html =
+        html.replace(
             /\n/g,
             "<br>"
         );
 
-
-    codeBlocks.forEach(
-        (code, index) => {
-
-            text =
-                text.replace(
-                    `@@CODEBLOCK${index}@@`,
-                    `<pre><code>${code}</code></pre>`
-                );
-
-        }
-    );
-
-
-    text =
-        text.replace(
-            /<\/h([1-3])><br>/g,
-            "</h$1>"
-        );
-
-
-    text =
-        text.replace(
-            /<\/pre><br>/g,
-            "</pre>"
-        );
-
-
-    text =
-        text.replace(
-            /<\/ul><br>/g,
-            "</ul>"
-        );
-
-
-    text =
-        text.replace(
-            /<\/ol><br>/g,
-            "</ol>"
-        );
-
-
-    return text;
-
+    return html;
 }
 
-
 /* =========================================================
-   ADD MESSAGE
-========================================================= */
+   TYPING INDICATOR
+   ========================================================= */
 
-function addMessage(
-    role,
-    text,
-    save = true
-) {
-
-    if (welcome) {
-
-        welcome.style.display =
-            "none";
-
-    }
-
-
-    const row =
-        document.createElement("div");
-
-    row.className =
-        `message-row ${role}`;
-
-
-    const bubble =
-        document.createElement("div");
-
-    bubble.className =
-        "message-bubble";
-
-
-    if (role === "assistant") {
-
-        bubble.innerHTML =
-            markdownToHTML(text);
-
-    } else {
-
-        bubble.textContent =
-            text;
-
-    }
-
-
-    row.appendChild(bubble);
-
-    chat.appendChild(row);
-
-
-    if (save) {
-
-        const conversation =
-            getCurrentConversation();
-
-        if (conversation) {
-
-            conversation.messages.push({
-
-                role: role,
-
-                content: text,
-
-                createdAt: Date.now()
-
-            });
-
-            conversation.updatedAt =
-                Date.now();
-
-            saveConversations();
-
-        }
-
-    }
-
-
-    scrollToBottom();
-
-}
-
-
-/* =========================================================
-   RENDER CURRENT
-========================================================= */
-
-function renderCurrentConversation() {
-
-    const conversation =
-        getCurrentConversation();
-
-    chat.innerHTML = "";
-
-
-    if (!conversation) {
-
-        if (welcome) {
-
-            chat.appendChild(
-                welcome
-            );
-
-            welcome.style.display =
-                "";
-
-        }
-
-        return;
-
-    }
-
-
-    if (
-        conversation.messages.length === 0
-    ) {
-
-        const welcomeClone =
-            document.createElement("section");
-
-        welcomeClone.className =
-            "welcome";
-
-        welcomeClone.innerHTML =
-            `
-            <div class="welcome-icon">
-                <img
-                    src="icon.png"
-                    alt="Chat AI Pro"
-                >
-            </div>
-
-            <h2>
-                مرحبًا بك في Chat AI Pro
-            </h2>
-
-            <p>
-                اكتب سؤالك وسأحاول مساعدتك.
-            </p>
-            `;
-
-        chat.appendChild(
-            welcomeClone
+function addTypingIndicator() {
+    const container =
+        firstElement(
+            "messages",
+            "chatMessages",
+            "messagesContainer"
         );
 
-        return;
-
+    if (!container) {
+        return null;
     }
 
+    const element =
+        document.createElement(
+            "div"
+        );
 
-    conversation.messages.forEach(
-        message => {
+    element.className =
+        "message assistant-message typing-message";
 
-            addMessage(
-                message.role,
-                message.content,
-                false
-            );
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   LOADING MESSAGE
-========================================================= */
-
-function addLoadingMessage() {
-
-    const row =
-        document.createElement("div");
-
-    row.className =
-        "message-row assistant";
-
-    row.id =
-        "aiLoadingMessage";
-
-
-    const bubble =
-        document.createElement("div");
-
-    bubble.className =
-        "message-bubble";
-
-
-    bubble.innerHTML =
-        `
-        <div class="loading-dots">
-            <span></span>
-            <span></span>
-            <span></span>
+    element.innerHTML = `
+        <div class="message-bubble">
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
         </div>
-        `;
+    `;
 
-
-    row.appendChild(bubble);
-
-    chat.appendChild(row);
-
-    scrollToBottom();
-
-}
-
-
-function removeLoadingMessage() {
-
-    const loading =
-        document.getElementById(
-            "aiLoadingMessage"
-        );
-
-    if (loading) {
-        loading.remove();
-    }
-
-}
-
-
-/* =========================================================
-   SCROLL
-========================================================= */
-
-function scrollToBottom() {
-
-    requestAnimationFrame(
-        () => {
-
-            chat.scrollTo({
-                top: chat.scrollHeight,
-                behavior: "smooth"
-            });
-
-        }
+    container.appendChild(
+        element
     );
 
+    scrollChatToBottom();
+
+    return element;
 }
 
-
-/* =========================================================
-   SEND MESSAGE
-========================================================= */
-
-async function sendMessage() {
-
-    if (isSending) return;
-
-    const text =
-        messageInput.value.trim();
-
-    if (!text) return;
-
-
-    let conversation =
-        getCurrentConversation();
-
-
-    if (!conversation) {
-
-        createNewConversation();
-
-        conversation =
-            getCurrentConversation();
-
-    }
-
-
-    /*
-     * First user message becomes the title.
-     */
-
+function removeTypingIndicator(
+    element
+) {
     if (
-        conversation.messages.length === 0
+        element &&
+        element.parentNode
     ) {
-
-        conversation.title =
-            generateTitle(text);
-
+        element.parentNode.removeChild(
+            element
+        );
     }
-
-
-    addMessage(
-        "user",
-        text,
-        true
-    );
-
-
-    messageInput.value = "";
-
-    autoResizeTextarea();
-
-
-    isSending = true;
-
-    sendBtn.disabled = true;
-
-
-    addLoadingMessage();
-
-
-    try {
-
-        const response =
-            await fetch(
-                "/api/chat",
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body: JSON.stringify({
-
-                        messages:
-                            conversation.messages.map(
-                                message => ({
-                                    role:
-                                        message.role,
-                                    content:
-                                        message.content
-                                })
-                            )
-
-                    })
-
-                }
-            );
-
-
-        let data = {};
-
-        try {
-
-            data =
-                await response.json();
-
-        } catch {
-
-            data = {};
-
-        }
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                data.error ||
-                data.message ||
-                "تعذر الحصول على إجابة."
-            );
-
-        }
-
-
-        const answer =
-            data.reply ||
-            data.response ||
-            data.answer ||
-            data.message;
-
-
-        if (!answer) {
-
-            throw new Error(
-                "لم يتم استلام إجابة من الخادم."
-            );
-
-        }
-
-
-        removeLoadingMessage();
-
-
-        addMessage(
-            "assistant",
-            answer,
-            true
-        );
-
-
-        conversation =
-            getCurrentConversation();
-
-        if (conversation) {
-
-            conversation.updatedAt =
-                Date.now();
-
-            saveConversations();
-
-            renderConversationList();
-
-        }
-
-
-    } catch (error) {
-
-        console.error(
-            "Chat error:",
-            error
-        );
-
-        removeLoadingMessage();
-
-
-        addMessage(
-            "assistant",
-            "حدث خطأ: " +
-            (
-                error.message ||
-                "تعذر الحصول على إجابة حاليًا."
-            ),
-            false
-        );
-
-    } finally {
-
-        isSending = false;
-
-        sendBtn.disabled = false;
-
-        messageInput.focus();
-
-    }
-
 }
 
-
 /* =========================================================
-   NEW CHAT
-========================================================= */
+   CONVERSATION LIST
+   ========================================================= */
 
-function newChat() {
+function renderConversationList() {
+    const container =
+        firstElement(
+            "conversationList",
+            "historyList",
+            "chatHistory"
+        );
 
-    createNewConversation();
-
-    messageInput.focus();
-
-}
-
-
-/* =========================================================
-   CLEAR CURRENT CHAT
-========================================================= */
-
-function clearCurrentChat() {
-
-    const conversation =
-        getCurrentConversation();
-
-    if (!conversation) return;
-
-
-    if (
-        conversation.messages.length === 0
-    ) {
+    if (!container) {
         return;
     }
 
+    container.innerHTML = "";
 
-    const confirmed =
-        window.confirm(
-            "هل تريد بدء محادثة جديدة؟"
+    for (
+        const conversation of
+        conversations
+    ) {
+        const item =
+            document.createElement(
+                "button"
+            );
+
+        item.type = "button";
+
+        item.className =
+            "conversation-item";
+
+        if (
+            conversation.id ===
+            currentConversationId
+        ) {
+            item.classList.add(
+                "active"
+            );
+        }
+
+        const title =
+            document.createElement(
+                "div"
+            );
+
+        title.className =
+            "conversation-title";
+
+        title.textContent =
+            conversation.title ||
+            "محادثة جديدة";
+
+        const date =
+            document.createElement(
+                "div"
+            );
+
+        date.className =
+            "conversation-date";
+
+        date.textContent =
+            formatDate(
+                conversation.createdAt
+            );
+
+        item.appendChild(
+            title
         );
 
-    if (!confirmed) return;
+        item.appendChild(
+            date
+        );
 
+        item.addEventListener(
+            "click",
+            () => {
+                currentConversationId =
+                    conversation.id;
 
-    createNewConversation();
+                saveConversations();
 
+                renderMessages();
+
+                renderConversationList();
+
+                closeMobileSidebar();
+            }
+        );
+
+        container.appendChild(
+            item
+        );
+    }
 }
-
 
 /* =========================================================
-   TEXTAREA
-========================================================= */
+   DATE
+   ========================================================= */
 
-function autoResizeTextarea() {
-
-    messageInput.style.height =
-        "auto";
-
-    messageInput.style.height =
-        Math.min(
-            messageInput.scrollHeight,
-            150
-        ) + "px";
-
+function formatDate(
+    value
+) {
+    try {
+        return new Intl.DateTimeFormat(
+            "ar-SA",
+            {
+                year: "numeric",
+                month: "numeric",
+                day: "numeric"
+            }
+        ).format(
+            new Date(value)
+        );
+    } catch {
+        return "";
+    }
 }
-
 
 /* =========================================================
    MOBILE SIDEBAR
-========================================================= */
+   ========================================================= */
 
-function openSidebar() {
+function setupMobileSidebar() {
+    const openButton =
+        firstElement(
+            "menuButton",
+            "sidebarToggle",
+            "openSidebar"
+        );
 
-    if (!sidebar) return;
+    const closeButton =
+        firstElement(
+            "closeSidebar",
+            "closeMenu"
+        );
 
-    sidebar.classList.add(
-        "open"
-    );
+    if (openButton) {
+        openButton.addEventListener(
+            "click",
+            openMobileSidebar
+        );
+    }
 
-    sidebarOverlay.classList.add(
-        "show"
-    );
-
+    if (closeButton) {
+        closeButton.addEventListener(
+            "click",
+            closeMobileSidebar
+        );
+    }
 }
 
+function openMobileSidebar() {
+    const sidebar =
+        firstElement(
+            "sidebar",
+            "sideBar"
+        );
 
-function closeSidebar() {
+    if (sidebar) {
+        sidebar.classList.add(
+            "open"
+        );
+    }
 
-    if (!sidebar) return;
-
-    sidebar.classList.remove(
-        "open"
+    document.body.classList.add(
+        "sidebar-open"
     );
-
-    sidebarOverlay.classList.remove(
-        "show"
-    );
-
 }
 
+function closeMobileSidebar() {
+    const sidebar =
+        firstElement(
+            "sidebar",
+            "sideBar"
+        );
+
+    if (sidebar) {
+        sidebar.classList.remove(
+            "open"
+        );
+    }
+
+    document.body.classList.remove(
+        "sidebar-open"
+    );
+}
 
 /* =========================================================
-   EVENTS
-========================================================= */
+   SCROLL
+   ========================================================= */
 
+function scrollChatToBottom() {
+    const container =
+        firstElement(
+            "messages",
+            "chatMessages",
+            "messagesContainer"
+        );
 
-/* Send OTP */
+    if (!container) {
+        return;
+    }
 
-if (sendOtpBtn) {
-
-    sendOtpBtn.addEventListener(
-        "click",
-        sendOtp
-    );
-
-}
-
-
-/* Verify OTP */
-
-if (verifyOtpBtn) {
-
-    verifyOtpBtn.addEventListener(
-        "click",
-        verifyOtp
-    );
-
-}
-
-
-/* Resend */
-
-if (resendOtpBtn) {
-
-    resendOtpBtn.addEventListener(
-        "click",
-        resendOtp
-    );
-
-}
-
-
-/* Back */
-
-if (backToPhoneBtn) {
-
-    backToPhoneBtn.addEventListener(
-        "click",
+    requestAnimationFrame(
         () => {
-
-            showPhoneStep();
-
+            container.scrollTop =
+                container.scrollHeight;
         }
     );
-
 }
-
-
-/* Enter on phone */
-
-if (phoneInput) {
-
-    phoneInput.addEventListener(
-        "keydown",
-        event => {
-
-            if (
-                event.key === "Enter"
-            ) {
-
-                event.preventDefault();
-
-                sendOtp();
-
-            }
-
-        }
-    );
-
-}
-
-
-/* Enter on OTP */
-
-if (otpInput) {
-
-    otpInput.addEventListener(
-        "input",
-        () => {
-
-            otpInput.value =
-                otpInput.value
-                    .replace(/\D/g, "")
-                    .slice(0, 8);
-
-        }
-    );
-
-
-    otpInput.addEventListener(
-        "keydown",
-        event => {
-
-            if (
-                event.key === "Enter"
-            ) {
-
-                event.preventDefault();
-
-                verifyOtp();
-
-            }
-
-        }
-    );
-
-}
-
-
-/* Send message */
-
-if (sendBtn) {
-
-    sendBtn.addEventListener(
-        "click",
-        sendMessage
-    );
-
-}
-
-
-/* Enter in message */
-
-if (messageInput) {
-
-    messageInput.addEventListener(
-        "input",
-        autoResizeTextarea
-    );
-
-
-    messageInput.addEventListener(
-        "keydown",
-        event => {
-
-            if (
-                event.key === "Enter" &&
-                !event.shiftKey
-            ) {
-
-                event.preventDefault();
-
-                sendMessage();
-
-            }
-
-        }
-    );
-
-}
-
-
-/* New chat */
-
-if (newChatBtn) {
-
-    newChatBtn.addEventListener(
-        "click",
-        newChat
-    );
-
-}
-
-
-/* Top new chat */
-
-if (clearBtn) {
-
-    clearBtn.addEventListener(
-        "click",
-        clearCurrentChat
-    );
-
-}
-
-
-/* Logout */
-
-if (logoutBtn) {
-
-    logoutBtn.addEventListener(
-        "click",
-        logout
-    );
-
-}
-
-
-/* Mobile menu */
-
-if (menuBtn) {
-
-    menuBtn.addEventListener(
-        "click",
-        openSidebar
-    );
-
-}
-
-
-if (sidebarOverlay) {
-
-    sidebarOverlay.addEventListener(
-        "click",
-        closeSidebar
-    );
-
-}
-
 
 /* =========================================================
-   INITIALIZATION
-========================================================= */
+   INPUT RESIZE
+   ========================================================= */
 
-function initialize() {
+function autoResizeInput(
+    event
+) {
+    const input =
+        event &&
+        event.target
+            ? event.target
+            : firstElement(
+                  "messageInput",
+                  "message",
+                  "chatInput",
+                  "userInput"
+              );
 
-    const auth =
-        getAuth();
+    if (!input) {
+        return;
+    }
 
+    input.style.height =
+        "auto";
+
+    input.style.height =
+        Math.min(
+            input.scrollHeight,
+            180
+        ) + "px";
+}
+
+/* =========================================================
+   BUTTON LOADING
+   ========================================================= */
+
+function setButtonLoading(
+    button,
+    loading,
+    text
+) {
+    if (!button) {
+        return;
+    }
 
     if (
-        auth &&
-        auth.authenticated &&
-        auth.phone
+        loading
     ) {
-
-        authScreen.classList.add(
-            "hidden"
-        );
-
-        app.classList.remove(
-            "hidden"
-        );
-
-        userPhone.textContent =
-            fullSaudiPhone(
-                normalizeSaudiPhone(
-                    auth.phone
-                )
-            );
-
-        loadConversations();
-
         if (
-            conversations.length === 0
+            !button.dataset.originalText
         ) {
+            button.dataset.originalText =
+                button.textContent;
+        }
 
-            createNewConversation();
+        button.disabled =
+            true;
 
-        } else {
-
-            currentConversationId =
-                conversations[0].id;
-
-            renderConversationList();
-
-            renderCurrentConversation();
-
+        if (text) {
+            button.textContent =
+                text;
         }
 
     } else {
+        button.disabled =
+            false;
 
-        authScreen.classList.remove(
-            "hidden"
-        );
+        if (
+            button.dataset.originalText
+        ) {
+            button.textContent =
+                button.dataset.originalText;
 
-        app.classList.add(
-            "hidden"
-        );
-
-        showPhoneStep();
-
+            delete button.dataset
+                .originalText;
+        }
     }
-
 }
 
+/* =========================================================
+   DEBUG
+   ========================================================= */
 
-initialize();
+window.ChatAIPro = {
+    sendMessage,
+    sendOtp,
+    verifyOtp,
+    logout,
+
+    getConversations() {
+        return conversations;
+    },
+
+    getCurrentConversation() {
+        return getCurrentConversation();
+    }
+};
+
+console.log(
+    "Chat AI Pro frontend loaded successfully."
+);
