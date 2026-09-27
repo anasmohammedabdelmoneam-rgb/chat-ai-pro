@@ -1,181 +1,99 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const path = require("path");
-const crypto = require("crypto");
-
-const { initializeApp, cert } = require("firebase-admin/app");
-const { getAuth } = require("firebase-admin/auth");
 
 dotenv.config();
 
-const app = express();
-const PORT = process.env.PORT || 10000;
+const {
+  initializeApp,
+  cert,
+  getApps
+} = require("firebase-admin/app");
 
-// ======================================================
-// BASIC CONFIG
-// ======================================================
+const {
+  getAuth
+} = require("firebase-admin/auth");
+
+const app = express();
 
 app.use(cors());
 app.use(express.json({ limit: "2mb" }));
-app.use(express.urlencoded({ extended: true }));
 
-// ======================================================
-// FIREBASE ADMIN
-// ======================================================
+/* =========================================================
+   CONFIG
+========================================================= */
 
-let firebaseApp = null;
+const PORT = process.env.PORT || 10000;
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const AUTHENTICA_API_KEY = process.env.AUTHENTICA_API_KEY;
+
+/* =========================================================
+   FIREBASE ADMIN
+========================================================= */
+
+let firebaseReady = false;
 let firebaseAuth = null;
 
-function cleanPrivateKey(value) {
-  if (!value) return "";
+try {
+  if (
+    process.env.FIREBASE_PROJECT_ID &&
+    process.env.FIREBASE_CLIENT_EMAIL &&
+    process.env.FIREBASE_PRIVATE_KEY
+  ) {
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(
+      /\\n/g,
+      "\n"
+    );
 
-  return value
-    .trim()
-    .replace(/^["']|["']$/g, "")
-    .replace(/\\n/g, "\n")
-    .replace(/\r\n/g, "\n");
-}
+    if (getApps().length === 0) {
+      initializeApp({
+        credential: cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey
+        })
+      });
+    }
 
-function initializeFirebase() {
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = cleanPrivateKey(process.env.FIREBASE_PRIVATE_KEY);
-
-  if (!projectId || !clientEmail || !privateKey) {
-    console.log("Firebase Admin: NOT configured");
-    return;
-  }
-
-  try {
-    firebaseApp = initializeApp({
-      credential: cert({
-        projectId: projectId,
-        clientEmail: clientEmail,
-        privateKey: privateKey
-      })
-    });
-
-    firebaseAuth = getAuth(firebaseApp);
+    firebaseAuth = getAuth();
+    firebaseReady = true;
 
     console.log("Firebase Admin: configured");
-  } catch (error) {
-    console.error(
-      "Firebase Admin initialization failed:",
-      error.message
-    );
+  } else {
+    console.log("Firebase Admin: missing environment variables");
   }
+} catch (error) {
+  console.error(
+    "Firebase Admin initialization failed:",
+    error.message
+  );
 }
 
-initializeFirebase();
+/* =========================================================
+   BASIC INFO
+========================================================= */
 
-// ======================================================
-// HELPERS
-// ======================================================
+console.log("Gemini:", GEMINI_API_KEY ? "configured" : "missing");
+console.log("Groq:", GROQ_API_KEY ? "configured" : "missing");
+console.log(
+  "OpenRouter:",
+  OPENROUTER_API_KEY ? "configured" : "missing"
+);
+console.log(
+  "Authentica:",
+  AUTHENTICA_API_KEY ? "configured" : "missing"
+);
+console.log(
+  "Firebase:",
+  firebaseReady ? "configured" : "missing"
+);
 
-function cleanPhone(phone) {
-  if (!phone) return "";
-
-  return String(phone)
-    .trim()
-    .replace(/[^\d+]/g, "");
-}
-
-function phoneToUid(phone) {
-  const normalized = cleanPhone(phone);
-
-  const hash = crypto
-    .createHash("sha256")
-    .update(normalized)
-    .digest("hex");
-
-  return `phone_${hash}`;
-}
-
-function normalizeMessages(messages, message) {
-  if (Array.isArray(messages) && messages.length > 0) {
-    return messages
-      .filter(
-        (item) =>
-          item &&
-          typeof item === "object" &&
-          typeof item.content === "string"
-      )
-      .map((item) => ({
-        role:
-          item.role === "assistant" ||
-          item.role === "system"
-            ? item.role
-            : "user",
-        content: item.content
-      }));
-  }
-
-  if (message) {
-    return [
-      {
-        role: "user",
-        content: String(message)
-      }
-    ];
-  }
-
-  return [];
-}
-
-function extractBearerToken(req) {
-  const header = req.headers.authorization || "";
-
-  if (!header.startsWith("Bearer ")) {
-    return null;
-  }
-
-  return header.substring(7).trim();
-}
-
-// ======================================================
-// FIREBASE AUTH MIDDLEWARE
-// ======================================================
-
-async function requireFirebaseAuth(req, res, next) {
-  try {
-    if (!firebaseAuth) {
-      return res.status(503).json({
-        ok: false,
-        error: "Firebase Admin is not configured"
-      });
-    }
-
-    const token = extractBearerToken(req);
-
-    if (!token) {
-      return res.status(401).json({
-        ok: false,
-        error: "Missing Firebase ID token"
-      });
-    }
-
-    const decodedToken = await firebaseAuth.verifyIdToken(token);
-
-    req.user = decodedToken;
-
-    next();
-  } catch (error) {
-    console.error(
-      "Firebase token verification failed:",
-      error.message
-    );
-
-    return res.status(401).json({
-      ok: false,
-      error: "Invalid or expired Firebase ID token"
-    });
-  }
-}
-
-// ======================================================
-// HEALTH
-// ======================================================
+/* =========================================================
+   HEALTH
+========================================================= */
 
 app.get("/api/health", (req, res) => {
   res.json({
@@ -183,13 +101,13 @@ app.get("/api/health", (req, res) => {
     service: "Chat AI Pro",
 
     providers: {
-      gemini: !!process.env.GEMINI_API_KEY,
-      groq: !!process.env.GROQ_API_KEY,
-      openrouter: !!process.env.OPENROUTER_API_KEY,
-      authentica: !!process.env.AUTHENTICA_API_KEY
+      gemini: !!GEMINI_API_KEY,
+      groq: !!GROQ_API_KEY,
+      openrouter: !!OPENROUTER_API_KEY,
+      authentica: !!AUTHENTICA_API_KEY
     },
 
-    firebase: !!firebaseAuth,
+    firebase: firebaseReady,
 
     models: {
       gemini: "gemini-3.8-flash",
@@ -199,31 +117,123 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// ======================================================
-// AUTHENTICA - SEND WHATSAPP OTP
-// ======================================================
+/* =========================================================
+   FIREBASE AUTH MIDDLEWARE
+========================================================= */
+
+async function requireFirebaseAuth(req, res, next) {
+  try {
+    if (!firebaseAuth) {
+      return res.status(500).json({
+        success: false,
+        message: "Firebase Admin غير مهيأ على الخادم."
+      });
+    }
+
+    const authorization = req.headers.authorization || "";
+
+    if (!authorization.startsWith("Bearer ")) {
+      return res.status(401).json({
+        success: false,
+        message: "لم يتم إرسال رمز تسجيل الدخول."
+      });
+    }
+
+    const idToken = authorization.substring(7).trim();
+
+    if (!idToken) {
+      return res.status(401).json({
+        success: false,
+        message: "رمز تسجيل الدخول فارغ."
+      });
+    }
+
+    const decodedToken = await firebaseAuth.verifyIdToken(idToken);
+
+    req.user = decodedToken;
+
+    next();
+  } catch (error) {
+    console.error(
+      "Firebase authentication failed:",
+      error.message
+    );
+
+    return res.status(401).json({
+      success: false,
+      message: "جلسة تسجيل الدخول غير صالحة أو منتهية."
+    });
+  }
+}
+
+/* =========================================================
+   AUTHENTICA - SEND OTP
+========================================================= */
 
 app.post("/api/auth/send-otp", async (req, res) => {
   try {
-    const apiKey = process.env.AUTHENTICA_API_KEY;
-
-    if (!apiKey) {
+    if (!AUTHENTICA_API_KEY) {
       return res.status(500).json({
-        ok: false,
-        error: "Authentica API key is missing"
+        success: false,
+        message: "AUTHENTICA_API_KEY غير موجود."
       });
     }
 
-    const phone = cleanPhone(req.body.phone);
+    const {
+      method = "whatsapp",
+      phone,
+      email,
+      template_id,
+      fallback_phone,
+      fallback_email,
+      otp
+    } = req.body || {};
 
-    if (!phone) {
+    if (method === "email" && !email) {
       return res.status(400).json({
-        ok: false,
-        error: "Phone number is required"
+        success: false,
+        message: "البريد الإلكتروني مطلوب."
       });
     }
 
-    console.log("Authentica: sending whatsapp OTP");
+    if (
+      (method === "whatsapp" || method === "sms") &&
+      !phone
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "رقم الهاتف مطلوب."
+      });
+    }
+
+    const body = {
+      method
+    };
+
+    if (phone) body.phone = phone;
+    if (email) body.email = email;
+
+    if (template_id !== undefined) {
+      body.template_id = template_id;
+    }
+
+    if (fallback_phone) {
+      body.fallback_phone = fallback_phone;
+    }
+
+    if (fallback_email) {
+      body.fallback_email = fallback_email;
+    }
+
+    if (otp) {
+      body.otp = otp;
+    }
+
+    console.log(
+      "Authentica: sending",
+      method,
+      "OTP"
+    );
 
     const response = await fetch(
       "https://api.authentica.sa/api/v2/send-otp",
@@ -231,53 +241,38 @@ app.post("/api/auth/send-otp", async (req, res) => {
         method: "POST",
 
         headers: {
-          "X-Authorization": apiKey,
+          "X-Authorization": AUTHENTICA_API_KEY,
           "Accept": "application/json",
           "Content-Type": "application/json"
         },
 
-        body: JSON.stringify({
-          method: "whatsapp",
-          phone: phone,
-          template_id: 1
-        })
+        body: JSON.stringify(body)
       }
     );
 
-    const text = await response.text();
-
-    let data;
-
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = {
-        raw: text
-      };
-    }
+    const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
       console.error(
         "Authentica SEND OTP failed:",
         response.status,
-        data
+        JSON.stringify(data)
       );
 
       return res.status(response.status).json({
-        ok: false,
-        error:
-          data.message ||
-          data.error ||
-          "Failed to send OTP",
+        success: false,
+        message:
+          data?.message ||
+          "فشل إرسال رمز التحقق.",
         details: data
       });
     }
 
     return res.json({
-      ok: true,
+      success: true,
       message:
-        data.message ||
-        "OTP sent successfully",
+        data?.message ||
+        "تم إرسال رمز التحقق.",
       data
     });
   } catch (error) {
@@ -287,45 +282,55 @@ app.post("/api/auth/send-otp", async (req, res) => {
     );
 
     return res.status(500).json({
-      ok: false,
-      error: "Failed to send OTP"
+      success: false,
+      message: "حدث خطأ أثناء إرسال رمز التحقق."
     });
   }
 });
 
-// ======================================================
-// AUTHENTICA - VERIFY OTP
-// ======================================================
+/* =========================================================
+   AUTHENTICA - VERIFY OTP
+========================================================= */
 
 app.post("/api/auth/verify-otp", async (req, res) => {
   try {
-    if (!firebaseAuth) {
-      return res.status(503).json({
-        ok: false,
-        error: "Firebase Admin is not configured"
-      });
-    }
-
-    const apiKey = process.env.AUTHENTICA_API_KEY;
-
-    if (!apiKey) {
+    if (!AUTHENTICA_API_KEY) {
       return res.status(500).json({
-        ok: false,
-        error: "Authentica API key is missing"
+        success: false,
+        message: "AUTHENTICA_API_KEY غير موجود."
       });
     }
 
-    const phone = cleanPhone(req.body.phone);
-    const otp = String(req.body.otp || "").trim();
+    const {
+      phone,
+      email,
+      otp
+    } = req.body || {};
 
-    if (!phone || !otp) {
+    if (!otp) {
       return res.status(400).json({
-        ok: false,
-        error: "Phone and OTP are required"
+        success: false,
+        message: "رمز التحقق مطلوب."
       });
     }
 
-    console.log("Authentica: verifying whatsapp OTP");
+    if (!phone && !email) {
+      return res.status(400).json({
+        success: false,
+        message: "رقم الهاتف أو البريد الإلكتروني مطلوب."
+      });
+    }
+
+    const body = {
+      otp: String(otp)
+    };
+
+    if (phone) body.phone = phone;
+    if (email) body.email = email;
+
+    console.log(
+      "Authentica: verifying OTP"
+    );
 
     const response = await fetch(
       "https://api.authentica.sa/api/v2/verify-otp",
@@ -333,83 +338,79 @@ app.post("/api/auth/verify-otp", async (req, res) => {
         method: "POST",
 
         headers: {
-          "X-Authorization": apiKey,
+          "X-Authorization": AUTHENTICA_API_KEY,
           "Accept": "application/json",
           "Content-Type": "application/json"
         },
 
-        body: JSON.stringify({
-          phone: phone,
-          otp: otp
-        })
+        body: JSON.stringify(body)
       }
     );
 
-    const text = await response.text();
+    const data = await response.json().catch(() => ({}));
 
-    let data;
-
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = {
-        raw: text
-      };
-    }
-
-    if (!response.ok || data.success === false) {
+    if (!response.ok) {
       console.error(
         "Authentica VERIFY OTP failed:",
         response.status,
-        data
+        JSON.stringify(data)
       );
 
-      return res.status(401).json({
-        ok: false,
-        error:
-          data.message ||
-          data.error ||
-          "Invalid OTP",
+      return res.status(response.status).json({
+        success: false,
+        message:
+          data?.message ||
+          "رمز التحقق غير صحيح.",
         details: data
       });
     }
 
-    // ----------------------------------------------
-    // Create deterministic Firebase UID from phone
-    // ----------------------------------------------
+    console.log(
+      "Authentica OTP verified successfully."
+    );
 
-    const uid = phoneToUid(phone);
+    /* -----------------------------------------
+       Create Firebase Custom Token
+    ----------------------------------------- */
 
-    let userRecord;
-
-    try {
-      userRecord = await firebaseAuth.getUser(uid);
-    } catch (error) {
-      if (error.code === "auth/user-not-found") {
-        userRecord = await firebaseAuth.createUser({
-          uid: uid,
-          phoneNumber: phone
-        });
-      } else {
-        throw error;
-      }
+    if (!firebaseAuth) {
+      return res.status(500).json({
+        success: false,
+        message:
+          "تم التحقق من OTP، لكن Firebase غير مهيأ."
+      });
     }
 
-    // ----------------------------------------------
-    // Create Firebase Custom Token
-    // ----------------------------------------------
+    const identifier =
+      phone ||
+      email ||
+      `user_${Date.now()}`;
+
+    const uid =
+      "authentica_" +
+      Buffer.from(identifier)
+        .toString("base64")
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .slice(0, 100);
 
     const customToken =
-      await firebaseAuth.createCustomToken(
-        userRecord.uid
-      );
+      await firebaseAuth.createCustomToken(uid, {
+        provider: "authentica"
+      });
+
+    console.log(
+      "Firebase custom token created."
+    );
 
     return res.json({
-      ok: true,
-      uid: userRecord.uid,
-      phone: phone,
-      token: customToken
+      success: true,
+      message: "تم التحقق بنجاح.",
+      token: customToken,
+      user: {
+        uid
+      }
     });
+
   } catch (error) {
     console.error(
       "Authentica VERIFY OTP error:",
@@ -417,89 +418,58 @@ app.post("/api/auth/verify-otp", async (req, res) => {
     );
 
     return res.status(500).json({
-      ok: false,
-      error: "Failed to verify OTP"
+      success: false,
+      message:
+        "حدث خطأ أثناء التحقق من رمز OTP."
     });
   }
 });
 
-// ======================================================
-// AUTHENTICA - BALANCE
-// ======================================================
-
-app.get("/api/auth/balance", async (req, res) => {
-  try {
-    const apiKey = process.env.AUTHENTICA_API_KEY;
-
-    if (!apiKey) {
-      return res.status(500).json({
-        ok: false,
-        error: "Authentica API key is missing"
-      });
-    }
-
-    const response = await fetch(
-      "https://api.authentica.sa/api/v2/balance",
-      {
-        method: "GET",
-
-        headers: {
-          "X-Authorization": apiKey,
-          "Accept": "application/json"
-        }
-      }
-    );
-
-    const text = await response.text();
-
-    let data;
-
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = {
-        raw: text
-      };
-    }
-
-    return res.status(response.status).json(data);
-  } catch (error) {
-    console.error(
-      "Authentica balance error:",
-      error.message
-    );
-
-    return res.status(500).json({
-      ok: false,
-      error: "Failed to get Authentica balance"
-    });
-  }
-});
-
-// ======================================================
-// GEMINI
-// ======================================================
+/* =========================================================
+   GEMINI
+========================================================= */
 
 async function askGemini(messages) {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    throw new Error("Gemini API key is missing");
+    throw new Error(
+      "GEMINI_API_KEY is missing."
+    );
   }
 
-  const conversation = messages
-    .map((item) => {
-      const role =
-        item.role === "assistant"
-          ? "Assistant"
-          : "User";
+  const contents = messages
+    .filter(
+      message =>
+        message &&
+        message.content &&
+        String(message.content).trim()
+    )
+    .map(message => ({
+      role:
+        message.role === "assistant"
+          ? "model"
+          : "user",
 
-      return `${role}: ${item.content}`;
-    })
-    .join("\n\n");
+      parts: [
+        {
+          text: String(message.content)
+        }
+      ]
+    }));
+
+  if (contents.length === 0) {
+    throw new Error(
+      "No valid messages were provided to Gemini."
+    );
+  }
+
+  console.log(
+    "Gemini: sending request..."
+  );
 
   const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/interactions",
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
     {
       method: "POST",
 
@@ -509,69 +479,116 @@ async function askGemini(messages) {
       },
 
       body: JSON.stringify({
-        model: "gemini-3.8-flash",
-        input: conversation
+        contents
       })
     }
   );
 
-  const data = await response.json();
+  const data =
+    await response.json().catch(() => ({}));
+
+  /* -----------------------------------------
+     Safe diagnostic logs
+  ----------------------------------------- */
+
+  console.log(
+    "Gemini HTTP status:",
+    response.status
+  );
+
+  console.log(
+    "Gemini response keys:",
+    Object.keys(data || {})
+  );
+
+  console.log(
+    "Gemini candidates:",
+    Array.isArray(data?.candidates)
+      ? data.candidates.length
+      : 0
+  );
+
+  if (data?.promptFeedback) {
+    console.log(
+      "Gemini promptFeedback:",
+      JSON.stringify(data.promptFeedback)
+    );
+  }
+
+  /* -----------------------------------------
+     API error
+  ----------------------------------------- */
 
   if (!response.ok) {
+    console.error(
+      "Gemini API error:",
+      JSON.stringify(data)
+    );
+
     throw new Error(
-      `Gemini ${response.status}: ${
-        data.error?.message ||
-        JSON.stringify(data)
-      }`
+      data?.error?.message ||
+      `Gemini HTTP ${response.status}`
     );
   }
 
-  if (typeof data.output_text === "string") {
-    return data.output_text;
-  }
+  /* -----------------------------------------
+     Extract response
+  ----------------------------------------- */
 
-  // Fallback for structured response
-  const textParts = [];
+  const reply =
+    data?.candidates?.[0]?.content?.parts
+      ?.map(part => part?.text || "")
+      .join("")
+      .trim();
 
-  if (Array.isArray(data.steps)) {
-    for (const step of data.steps) {
-      if (
-        step.type === "model_output" &&
-        Array.isArray(step.content)
-      ) {
-        for (const content of step.content) {
-          if (
-            content.type === "text" &&
-            typeof content.text === "string"
-          ) {
-            textParts.push(content.text);
-          }
-        }
-      }
-    }
-  }
+  if (!reply) {
+    console.error(
+      "Gemini returned no text:",
+      JSON.stringify({
+        candidates: data?.candidates,
+        promptFeedback: data?.promptFeedback
+      })
+    );
 
-  const finalText = textParts.join("");
-
-  if (!finalText) {
     throw new Error(
-      "Gemini returned an empty response"
+      "Gemini returned an empty response."
     );
   }
 
-  return finalText;
+  console.log(
+    "Gemini reply received successfully."
+  );
+
+  return reply;
 }
 
-// ======================================================
-// GROQ
-// ======================================================
+/* =========================================================
+   GROQ
+========================================================= */
 
 async function askGroq(messages) {
   const apiKey = process.env.GROQ_API_KEY;
 
   if (!apiKey) {
-    throw new Error("Groq API key is missing");
+    throw new Error(
+      "GROQ_API_KEY is missing."
+    );
   }
+
+  const formattedMessages = messages
+    .filter(
+      message =>
+        message &&
+        message.content
+    )
+    .map(message => ({
+      role:
+        message.role === "assistant"
+          ? "assistant"
+          : "user",
+
+      content: String(message.content)
+    }));
 
   const response = await fetch(
     "https://api.groq.com/openai/v1/chat/completions",
@@ -580,44 +597,58 @@ async function askGroq(messages) {
 
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`
+        "Authorization":
+          `Bearer ${apiKey}`
       },
 
       body: JSON.stringify({
         model: "openai/gpt-oss-20b",
-        messages: messages,
-        temperature: 0.7,
-        max_completion_tokens: 4096
+        messages: formattedMessages,
+        temperature: 0.7
       })
     }
   );
 
-  const data = await response.json();
+  const data =
+    await response.json().catch(() => ({}));
+
+  console.log(
+    "Groq HTTP status:",
+    response.status
+  );
 
   if (!response.ok) {
+    console.error(
+      "Groq API error:",
+      JSON.stringify(data)
+    );
+
     throw new Error(
-      `Groq ${response.status}: ${
-        data.error?.message ||
-        JSON.stringify(data)
-      }`
+      data?.error?.message ||
+      `Groq HTTP ${response.status}`
     );
   }
 
-  const text =
-    data.choices?.[0]?.message?.content;
+  const reply =
+    data?.choices?.[0]?.message?.content
+      ?.trim();
 
-  if (!text) {
+  if (!reply) {
     throw new Error(
-      "Groq returned an empty response"
+      "Groq returned an empty response."
     );
   }
 
-  return text;
+  console.log(
+    "Groq reply received successfully."
+  );
+
+  return reply;
 }
 
-// ======================================================
-// OPENROUTER
-// ======================================================
+/* =========================================================
+   OPENROUTER
+========================================================= */
 
 async function askOpenRouter(messages) {
   const apiKey =
@@ -625,9 +656,24 @@ async function askOpenRouter(messages) {
 
   if (!apiKey) {
     throw new Error(
-      "OpenRouter API key is missing"
+      "OPENROUTER_API_KEY is missing."
     );
   }
+
+  const formattedMessages = messages
+    .filter(
+      message =>
+        message &&
+        message.content
+    )
+    .map(message => ({
+      role:
+        message.role === "assistant"
+          ? "assistant"
+          : "user",
+
+      content: String(message.content)
+    }));
 
   const response = await fetch(
     "https://openrouter.ai/api/v1/chat/completions",
@@ -636,226 +682,182 @@ async function askOpenRouter(messages) {
 
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        "Authorization":
+          `Bearer ${apiKey}`,
         "HTTP-Referer":
           "https://chat-ai-pro-ymod.onrender.com",
-        "X-Title": "Chat AI Pro"
+        "X-Title":
+          "Chat AI Pro"
       },
 
       body: JSON.stringify({
         model: "openrouter/free",
-        messages: messages
+        messages: formattedMessages
       })
     }
   );
 
-  const data = await response.json();
+  const data =
+    await response.json().catch(() => ({}));
+
+  console.log(
+    "OpenRouter HTTP status:",
+    response.status
+  );
 
   if (!response.ok) {
+    console.error(
+      "OpenRouter API error:",
+      JSON.stringify(data)
+    );
+
     throw new Error(
-      `OpenRouter ${response.status}: ${
-        data.error?.message ||
-        JSON.stringify(data)
-      }`
+      data?.error?.message ||
+      `OpenRouter HTTP ${response.status}`
     );
   }
 
-  const text =
-    data.choices?.[0]?.message?.content;
+  const reply =
+    data?.choices?.[0]?.message?.content
+      ?.trim();
 
-  if (!text) {
+  if (!reply) {
     throw new Error(
-      "OpenRouter returned an empty response"
+      "OpenRouter returned an empty response."
     );
   }
 
-  return text;
+  console.log(
+    "OpenRouter reply received successfully."
+  );
+
+  return reply;
 }
 
-// ======================================================
-// CHAT
-// Gemini → Groq → OpenRouter
-// ======================================================
+/* =========================================================
+   CHAT
+========================================================= */
 
 app.post(
   "/api/chat",
   requireFirebaseAuth,
   async (req, res) => {
-    try {
-      const messages = normalizeMessages(
-        req.body.messages,
-        req.body.message || req.body.prompt
-      );
+    const messages =
+      Array.isArray(req.body?.messages)
+        ? req.body.messages
+        : [];
 
-      if (messages.length === 0) {
-        return res.status(400).json({
-          ok: false,
-          error: "Message is required"
-        });
-      }
-
-      let lastError = null;
-
-      // ----------------------------------------------
-      // 1. Gemini
-      // ----------------------------------------------
-
-      if (process.env.GEMINI_API_KEY) {
-        try {
-          console.log("AI provider: Gemini");
-
-          const answer =
-            await askGemini(messages);
-
-          return res.json({
-            ok: true,
-            provider: "gemini",
-            answer: answer
-          });
-        } catch (error) {
-          lastError = error;
-
-          console.error(
-            "Gemini failed:",
-            error.message
-          );
-        }
-      }
-
-      // ----------------------------------------------
-      // 2. Groq
-      // ----------------------------------------------
-
-      if (process.env.GROQ_API_KEY) {
-        try {
-          console.log("AI provider: Groq");
-
-          const answer =
-            await askGroq(messages);
-
-          return res.json({
-            ok: true,
-            provider: "groq",
-            answer: answer
-          });
-        } catch (error) {
-          lastError = error;
-
-          console.error(
-            "Groq failed:",
-            error.message
-          );
-        }
-      }
-
-      // ----------------------------------------------
-      // 3. OpenRouter
-      // ----------------------------------------------
-
-      if (process.env.OPENROUTER_API_KEY) {
-        try {
-          console.log(
-            "AI provider: OpenRouter"
-          );
-
-          const answer =
-            await askOpenRouter(messages);
-
-          return res.json({
-            ok: true,
-            provider: "openrouter",
-            answer: answer
-          });
-        } catch (error) {
-          lastError = error;
-
-          console.error(
-            "OpenRouter failed:",
-            error.message
-          );
-        }
-      }
-
-      return res.status(503).json({
-        ok: false,
-        error:
-          "All AI providers failed",
-        details: lastError
-          ? lastError.message
-          : "No AI provider is configured"
-      });
-    } catch (error) {
-      console.error(
-        "Chat error:",
-        error.message
-      );
-
-      return res.status(500).json({
-        ok: false,
-        error: "Chat request failed"
+    if (messages.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "لا توجد رسائل."
       });
     }
+
+    console.log(
+      "AI provider: Gemini"
+    );
+
+    /* -----------------------------------------
+       1. Gemini
+    ----------------------------------------- */
+
+    try {
+      const reply =
+        await askGemini(messages);
+
+      return res.json({
+        success: true,
+        provider: "gemini",
+        reply
+      });
+
+    } catch (error) {
+      console.error(
+        "Gemini failed:",
+        error.message
+      );
+    }
+
+    /* -----------------------------------------
+       2. Groq
+    ----------------------------------------- */
+
+    console.log(
+      "AI provider: Groq fallback"
+    );
+
+    try {
+      const reply =
+        await askGroq(messages);
+
+      return res.json({
+        success: true,
+        provider: "groq",
+        reply
+      });
+
+    } catch (error) {
+      console.error(
+        "Groq failed:",
+        error.message
+      );
+    }
+
+    /* -----------------------------------------
+       3. OpenRouter
+    ----------------------------------------- */
+
+    console.log(
+      "AI provider: OpenRouter fallback"
+    );
+
+    try {
+      const reply =
+        await askOpenRouter(messages);
+
+      return res.json({
+        success: true,
+        provider: "openrouter",
+        reply
+      });
+
+    } catch (error) {
+      console.error(
+        "OpenRouter failed:",
+        error.message
+      );
+    }
+
+    /* -----------------------------------------
+       All providers failed
+    ----------------------------------------- */
+
+    return res.status(503).json({
+      success: false,
+      message:
+        "تعذر الحصول على رد من خدمات الذكاء الاصطناعي حاليًا."
+    });
   }
 );
 
-// ======================================================
-// FRONTEND
-// ======================================================
+/* =========================================================
+   ROOT
+========================================================= */
 
-app.use(express.static(__dirname));
-
-app.get("/{*splat}", (req, res) => {
-  res.sendFile(
-    path.join(__dirname, "index.html")
-  );
+app.get("/", (req, res) => {
+  res.json({
+    service: "Chat AI Pro",
+    status: "online"
+  });
 });
 
-// ======================================================
-// START SERVER
-// ======================================================
+/* =========================================================
+   START SERVER
+========================================================= */
 
 app.listen(PORT, () => {
   console.log(
     `Chat AI Pro running on port ${PORT}`
-  );
-
-  console.log(
-    `Gemini: ${
-      process.env.GEMINI_API_KEY
-        ? "configured"
-        : "missing"
-    }`
-  );
-
-  console.log(
-    `Groq: ${
-      process.env.GROQ_API_KEY
-        ? "configured"
-        : "missing"
-    }`
-  );
-
-  console.log(
-    `OpenRouter: ${
-      process.env.OPENROUTER_API_KEY
-        ? "configured"
-        : "missing"
-    }`
-  );
-
-  console.log(
-    `Authentica: ${
-      process.env.AUTHENTICA_API_KEY
-        ? "configured"
-        : "missing"
-    }`
-  );
-
-  console.log(
-    `Firebase: ${
-      firebaseAuth
-        ? "configured"
-        : "missing"
-    }`
   );
 });
