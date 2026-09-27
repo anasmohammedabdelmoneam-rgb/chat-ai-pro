@@ -1,59 +1,66 @@
-import { initializeApp } from
-  "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 
 import {
   getAuth,
-  signInWithCustomToken,
   onAuthStateChanged,
+  signInWithCustomToken,
   signOut
-} from
-  "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
 import {
   getFirestore,
   collection,
-  doc,
   addDoc,
-  setDoc,
+  doc,
+  getDoc,
   getDocs,
-  deleteDoc,
   query,
   orderBy,
-  serverTimestamp
-} from
-  "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+  serverTimestamp,
+  setDoc
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 
 // ======================================================
-// FIREBASE CONFIG
+// FIREBASE WEB CONFIG
 // ======================================================
 //
-// ضع هنا Firebase Web App config الخاص بمشروعك.
+// ضع هنا بيانات Web App من:
+// Firebase Console
+// Project Settings
+// General
+// Your apps
+// Web app
 //
-// Firebase Console:
-// Project settings
-// → General
-// → Your apps
-// → Web app
-// → SDK setup and configuration
-//
-// لا تضع هنا FIREBASE_PRIVATE_KEY.
-// لا تضع هنا FIREBASE_CLIENT_EMAIL.
-// لا تضع هنا أي مفتاح Admin.
+// لا تضع FIREBASE_PRIVATE_KEY هنا.
 // ======================================================
 
 const firebaseConfig = {
-  apiKey: "PUT_YOUR_FIREBASE_WEB_API_KEY_HERE",
-  authDomain: "PUT_YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "PUT_YOUR_PROJECT_ID_HERE",
-  storageBucket: "PUT_YOUR_STORAGE_BUCKET_HERE",
-  messagingSenderId: "PUT_YOUR_SENDER_ID_HERE",
-  appId: "PUT_YOUR_APP_ID_HERE"
+
+  apiKey: "ضع_API_KEY_هنا",
+
+  authDomain:
+    "ضع_PROJECT_ID_هنا.firebaseapp.com",
+
+  projectId:
+    "ضع_PROJECT_ID_هنا",
+
+  storageBucket:
+    "ضع_STORAGE_BUCKET_هنا",
+
+  messagingSenderId:
+    "ضع_MESSAGING_SENDER_ID_هنا",
+
+  appId:
+    "ضع_APP_ID_هنا"
+
 };
 
 
 // ======================================================
-// FIREBASE INITIALIZATION
+// FIREBASE INIT
 // ======================================================
 
 const firebaseApp =
@@ -67,20 +74,33 @@ const db =
 
 
 // ======================================================
-// ELEMENTS
+// GLOBAL STATE
 // ======================================================
 
-const loginScreen =
-  document.getElementById("loginScreen");
+let currentUser = null;
 
-const appScreen =
-  document.getElementById("appScreen");
+let currentConversationId = null;
 
-const phoneStep =
-  document.getElementById("phoneStep");
+let currentMessages = [];
 
-const otpStep =
-  document.getElementById("otpStep");
+let pendingPhone = "";
+
+
+// ======================================================
+// DOM
+// ======================================================
+
+const loginPage =
+  document.getElementById("loginPage");
+
+const appPage =
+  document.getElementById("appPage");
+
+const phoneSection =
+  document.getElementById("phoneSection");
+
+const otpSection =
+  document.getElementById("otpSection");
 
 const phoneInput =
   document.getElementById("phoneInput");
@@ -97,11 +117,26 @@ const verifyOtpButton =
 const backToPhoneButton =
   document.getElementById("backToPhoneButton");
 
-const loginStatus =
-  document.getElementById("loginStatus");
+const authMessage =
+  document.getElementById("authMessage");
 
-const historyList =
-  document.getElementById("historyList");
+const historyElement =
+  document.getElementById("history");
+
+const messagesElement =
+  document.getElementById("messages");
+
+const emptyChat =
+  document.getElementById("emptyChat");
+
+const chatInput =
+  document.getElementById("chatInput");
+
+const sendChatButton =
+  document.getElementById("sendChatButton");
+
+const chatStatus =
+  document.getElementById("chatStatus");
 
 const newChatButton =
   document.getElementById("newChatButton");
@@ -109,79 +144,168 @@ const newChatButton =
 const logoutButton =
   document.getElementById("logoutButton");
 
-const accountPhone =
-  document.getElementById("accountPhone");
-
-const messagesContainer =
-  document.getElementById("messages");
-
-const messageInput =
-  document.getElementById("messageInput");
-
-const sendButton =
-  document.getElementById("sendButton");
-
-const chatTitle =
-  document.getElementById("chatTitle");
-
 
 // ======================================================
-// STATE
+// LOGO ERROR
 // ======================================================
 
-let currentPhone = "";
-let currentConversationId = null;
+window.handleLogoError = function (image) {
 
-let currentMessages = [];
+  image.style.display = "none";
 
+  const fallback =
+    document.getElementById("logoFallback");
 
-// ======================================================
-// HELPERS
-// ======================================================
-
-function setLoginStatus(message, isError = false) {
-  loginStatus.textContent = message;
-  loginStatus.style.color =
-    isError ? "#ff8f9c" : "#8ddcff";
-}
-
-function cleanPhone(phone) {
-  return String(phone || "")
-    .trim()
-    .replace(/[^\d+]/g, "");
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function showLogin() {
-  loginScreen.classList.remove("hidden");
-  appScreen.classList.add("hidden");
-}
-
-function showApp() {
-  loginScreen.classList.add("hidden");
-  appScreen.classList.remove("hidden");
-}
-
-function setButtonLoading(button, loading, text) {
-  button.disabled = loading;
-
-  if (loading) {
-    button.dataset.oldText =
-      button.textContent;
-
-    button.textContent = text;
-  } else {
-    button.textContent =
-      button.dataset.oldText || button.textContent;
+  if (fallback) {
+    fallback.style.display = "flex";
   }
+};
+
+
+// ======================================================
+// MESSAGE
+// ======================================================
+
+function showAuthMessage(
+  message,
+  type = "info"
+) {
+
+  authMessage.textContent =
+    message;
+
+  authMessage.className =
+    "message " + type;
+}
+
+
+function clearAuthMessage() {
+
+  authMessage.textContent = "";
+
+  authMessage.className =
+    "message";
+}
+
+
+// ======================================================
+// PHONE NORMALIZATION
+// ======================================================
+
+function normalizeSaudiPhone(value) {
+
+  let phone =
+    String(value || "")
+      .trim()
+      .replace(/[^\d+]/g, "");
+
+  // 05XXXXXXXX
+  if (
+    phone.startsWith("05") &&
+    phone.length === 10
+  ) {
+
+    phone =
+      "+966" +
+      phone.substring(1);
+  }
+
+  // 5XXXXXXXX
+  else if (
+    phone.startsWith("5") &&
+    phone.length === 9
+  ) {
+
+    phone =
+      "+966" +
+      phone;
+  }
+
+  // 9665XXXXXXXX
+  else if (
+    phone.startsWith("9665") &&
+    phone.length === 12
+  ) {
+
+    phone =
+      "+" +
+      phone;
+  }
+
+  return phone;
+}
+
+
+function isValidSaudiPhone(phone) {
+
+  return /^\+9665\d{8}$/.test(phone);
+}
+
+
+// ======================================================
+// API HELPER
+// ======================================================
+
+async function apiRequest(
+  url,
+  options = {}
+) {
+
+  const response =
+    await fetch(url, {
+
+      ...options,
+
+      headers: {
+        "Content-Type":
+          "application/json",
+
+        ...(options.headers || {})
+      }
+
+    });
+
+  const text =
+    await response.text();
+
+  let data = null;
+
+  try {
+
+    data =
+      text
+        ? JSON.parse(text)
+        : {};
+
+  } catch {
+
+    data = {
+      raw: text
+    };
+
+  }
+
+  if (!response.ok) {
+
+    const error =
+      new Error(
+        data?.message ||
+        data?.error ||
+        data?.details ||
+        data?.raw ||
+        `HTTP ${response.status}`
+      );
+
+    error.status =
+      response.status;
+
+    error.data =
+      data;
+
+    throw error;
+  }
+
+  return data;
 }
 
 
@@ -189,481 +313,314 @@ function setButtonLoading(button, loading, text) {
 // SEND OTP
 // ======================================================
 
-sendOtpButton.addEventListener(
-  "click",
-  async () => {
+async function sendOTP() {
 
-    try {
+  clearAuthMessage();
 
-      currentPhone =
-        cleanPhone(phoneInput.value);
+  const phone =
+    normalizeSaudiPhone(
+      phoneInput.value
+    );
 
-      if (!currentPhone) {
-        setLoginStatus(
-          "اكتب رقم الهاتف أولًا.",
-          true
-        );
+  if (!isValidSaudiPhone(phone)) {
 
-        return;
-      }
+    showAuthMessage(
+      "اكتب رقمًا سعوديًا صحيحًا مثل +9665XXXXXXXX",
+      "error"
+    );
 
-      setButtonLoading(
-        sendOtpButton,
-        true,
-        "جاري الإرسال..."
-      );
+    return;
+  }
 
-      setLoginStatus(
-        "جاري إرسال رمز التحقق عبر WhatsApp..."
-      );
+  sendOtpButton.disabled = true;
 
-      const response =
-        await fetch("/api/auth/send-otp", {
+  sendOtpButton.textContent =
+    "جارٍ إرسال الرمز...";
+
+  try {
+
+    const result =
+      await apiRequest(
+        "/api/auth/send-otp",
+        {
           method: "POST",
 
-          headers: {
-            "Content-Type": "application/json"
-          },
-
           body: JSON.stringify({
-            phone: currentPhone
+            phone
           })
-        });
-
-      const data =
-        await response.json();
-
-      if (!response.ok || !data.ok) {
-        throw new Error(
-          data.error ||
-          data.message ||
-          "تعذر إرسال رمز التحقق"
-        );
-      }
-
-      phoneStep.classList.add("hidden");
-      otpStep.classList.remove("hidden");
-
-      setLoginStatus(
-        "تم إرسال رمز التحقق. أدخله هنا."
+        }
       );
 
-      otpInput.focus();
+    pendingPhone =
+      phone;
 
-    } catch (error) {
+    phoneInput.value =
+      phone;
 
-      console.error(error);
+    phoneSection.classList.add(
+      "hidden"
+    );
 
-      setLoginStatus(
-        error.message ||
-        "حدث خطأ أثناء إرسال الرمز.",
-        true
-      );
+    otpSection.classList.remove(
+      "hidden"
+    );
 
-    } finally {
+    showAuthMessage(
+      result.message ||
+      "تم إرسال رمز التحقق إلى WhatsApp.",
+      "success"
+    );
 
-      setButtonLoading(
-        sendOtpButton,
-        false
-      );
-    }
+    otpInput.focus();
+
+  } catch (error) {
+
+    console.error(
+      "SEND OTP ERROR:",
+      error
+    );
+
+    showAuthMessage(
+      error.message ||
+      "تعذر إرسال رمز WhatsApp.",
+      "error"
+    );
+
+  } finally {
+
+    sendOtpButton.disabled = false;
+
+    sendOtpButton.textContent =
+      "إرسال رمز التحقق";
   }
-);
+}
 
 
 // ======================================================
 // VERIFY OTP
 // ======================================================
 
-verifyOtpButton.addEventListener(
-  "click",
-  async () => {
+async function verifyOTP() {
 
-    try {
+  clearAuthMessage();
 
-      const otp =
-        String(otpInput.value || "").trim();
+  const otp =
+    String(
+      otpInput.value || ""
+    ).trim();
 
-      if (!otp) {
-        setLoginStatus(
-          "اكتب رمز التحقق.",
-          true
-        );
+  if (!pendingPhone) {
 
-        return;
-      }
+    showAuthMessage(
+      "أرسل رمز التحقق أولًا.",
+      "error"
+    );
 
-      setButtonLoading(
-        verifyOtpButton,
-        true,
-        "جاري التحقق..."
-      );
+    return;
+  }
 
-      setLoginStatus(
-        "جاري التحقق من الرمز..."
-      );
+  if (!otp) {
 
-      const response =
-        await fetch("/api/auth/verify-otp", {
+    showAuthMessage(
+      "اكتب رمز التحقق.",
+      "error"
+    );
+
+    return;
+  }
+
+  verifyOtpButton.disabled = true;
+
+  verifyOtpButton.textContent =
+    "جارٍ التحقق...";
+
+  try {
+
+    const result =
+      await apiRequest(
+        "/api/auth/verify-otp",
+        {
           method: "POST",
 
-          headers: {
-            "Content-Type": "application/json"
-          },
-
           body: JSON.stringify({
-            phone: currentPhone,
-            otp: otp
+            phone: pendingPhone,
+            otp
           })
-        });
-
-      const data =
-        await response.json();
-
-      if (!response.ok || !data.ok) {
-        throw new Error(
-          data.error ||
-          "رمز التحقق غير صحيح."
-        );
-      }
-
-      if (!data.token) {
-        throw new Error(
-          "لم يستلم التطبيق Firebase Custom Token."
-        );
-      }
-
-      // Firebase official custom-token flow
-      await signInWithCustomToken(
-        auth,
-        data.token
+        }
       );
 
-      setLoginStatus(
-        "تم تسجيل الدخول بنجاح."
-      );
+    if (!result.token) {
 
-    } catch (error) {
-
-      console.error(
-        "OTP verification error:",
-        error
-      );
-
-      setLoginStatus(
-        error.message ||
-        "حدث خطأ أثناء تسجيل الدخول.",
-        true
-      );
-
-    } finally {
-
-      setButtonLoading(
-        verifyOtpButton,
-        false
+      throw new Error(
+        "تم التحقق من الرمز، لكن الخادم لم يُرجع Firebase Token."
       );
     }
-  }
-);
 
+    await signInWithCustomToken(
+      auth,
+      result.token
+    );
 
-// ======================================================
-// BACK TO PHONE
-// ======================================================
+    showAuthMessage(
+      "تم تسجيل الدخول بنجاح.",
+      "success"
+    );
 
-backToPhoneButton.addEventListener(
-  "click",
-  () => {
+  } catch (error) {
 
-    otpStep.classList.add("hidden");
-    phoneStep.classList.remove("hidden");
+    console.error(
+      "VERIFY OTP ERROR:",
+      error
+    );
 
-    otpInput.value = "";
+    let message =
+      error.message ||
+      "تعذر التحقق من الرمز.";
 
-    setLoginStatus("");
+    if (
+      error.code ===
+      "auth/invalid-custom-token"
+    ) {
 
-  }
-);
+      message =
+        "Firebase رفض رمز تسجيل الدخول. تأكد أن Web App وRender يستخدمان نفس مشروع Firebase.";
 
-
-// ======================================================
-// AUTH STATE
-// ======================================================
-
-onAuthStateChanged(
-  auth,
-  async (user) => {
-
-    if (!user) {
-
-      showLogin();
-
-      return;
     }
 
-    showApp();
+    if (
+      error.code ===
+      "auth/custom-token-mismatch"
+    ) {
 
-    accountPhone.textContent =
-      currentPhone ||
-      user.phoneNumber ||
-      "حسابك";
+      message =
+        "هناك اختلاف بين مشروع Firebase الموجود في الواجهة ومشروع Firebase الموجود في Render.";
 
-    await loadConversations();
-
-    if (!currentConversationId) {
-      createNewChat();
     }
+
+    showAuthMessage(
+      message,
+      "error"
+    );
+
+  } finally {
+
+    verifyOtpButton.disabled = false;
+
+    verifyOtpButton.textContent =
+      "تأكيد الرمز";
   }
-);
+}
 
 
 // ======================================================
-// FIRESTORE PATH
+// BACK
+// ======================================================
+
+function backToPhone() {
+
+  otpSection.classList.add(
+    "hidden"
+  );
+
+  phoneSection.classList.remove(
+    "hidden"
+  );
+
+  otpInput.value = "";
+
+  pendingPhone = "";
+
+  clearAuthMessage();
+}
+
+
+// ======================================================
+// FIRESTORE
 // ======================================================
 
 function conversationsCollection() {
 
-  if (!auth.currentUser) {
+  if (!currentUser) {
     throw new Error(
-      "User is not authenticated."
+      "المستخدم غير مسجل الدخول."
     );
   }
 
   return collection(
     db,
     "users",
-    auth.currentUser.uid,
+    currentUser.uid,
     "conversations"
   );
 }
 
 
 // ======================================================
-// LOAD CONVERSATIONS
+// LOAD HISTORY
 // ======================================================
 
-async function loadConversations() {
+async function loadHistory() {
+
+  if (!currentUser) {
+    return;
+  }
+
+  historyElement.innerHTML = "";
 
   try {
 
-    if (!auth.currentUser) {
-      return;
-    }
-
-    historyList.innerHTML = "";
-
-    const conversationsRef =
-      conversationsCollection();
-
     const q =
       query(
-        conversationsRef,
-        orderBy("updatedAt", "desc")
+        conversationsCollection(),
+        orderBy(
+          "updatedAt",
+          "desc"
+        )
       );
 
     const snapshot =
       await getDocs(q);
 
-    if (snapshot.empty) {
-
-      historyList.innerHTML = `
-        <div style="
-          color:#7f91aa;
-          text-align:center;
-          padding:20px;
-          font-size:13px;
-        ">
-          لا توجد محادثات بعد
-        </div>
-      `;
-
-      return;
-    }
-
     snapshot.forEach(
-      (conversationDoc) => {
+      (item) => {
 
         const data =
-          conversationDoc.data();
+          item.data();
 
-        const item =
-          document.createElement("div");
-
-        item.className =
-          "history-item";
-
-        item.dataset.id =
-          conversationDoc.id;
-
-        item.innerHTML = `
-          <span class="history-title">
-            ${escapeHtml(
-              data.title ||
-              "محادثة جديدة"
-            )}
-          </span>
-
-          <button
-            class="delete-chat"
-            title="حذف"
-          >
-            ×
-          </button>
-        `;
-
-        item.addEventListener(
-          "click",
-          async (event) => {
-
-            if (
-              event.target.classList.contains(
-                "delete-chat"
-              )
-            ) {
-              return;
-            }
-
-            await openConversation(
-              conversationDoc.id
-            );
-          }
-        );
-
-        item
-          .querySelector(".delete-chat")
-          .addEventListener(
-            "click",
-            async (event) => {
-
-              event.stopPropagation();
-
-              await deleteConversation(
-                conversationDoc.id
-              );
-            }
+        const button =
+          document.createElement(
+            "button"
           );
 
-        historyList.appendChild(item);
+        button.className =
+          "history-item";
+
+        button.textContent =
+          data.title ||
+          "محادثة جديدة";
+
+        button.addEventListener(
+          "click",
+          () =>
+            openConversation(
+              item.id
+            )
+        );
+
+        historyElement.appendChild(
+          button
+        );
       }
     );
 
   } catch (error) {
 
     console.error(
-      "Load conversations error:",
+      "LOAD HISTORY:",
       error
     );
 
-    historyList.innerHTML = `
-      <div style="
-        color:#ff8f9c;
-        padding:15px;
-        font-size:13px;
-      ">
-        تعذر تحميل المحادثات
-      </div>
-    `;
   }
-}
-
-
-// ======================================================
-// CREATE NEW CHAT
-// ======================================================
-
-function createNewChat() {
-
-  currentConversationId = null;
-
-  currentMessages = [];
-
-  chatTitle.textContent =
-    "محادثة جديدة";
-
-  messagesContainer.innerHTML = `
-    <div class="welcome">
-      <h2>مرحبًا بك في Chat AI Pro 👋</h2>
-      <p>اكتب أي شيء تريد أن تسأل عنه.</p>
-    </div>
-  `;
-
-  document
-    .querySelectorAll(".history-item")
-    .forEach(
-      (item) =>
-        item.classList.remove("active")
-    );
-}
-
-
-// ======================================================
-// SAVE NEW CONVERSATION
-// ======================================================
-
-async function saveConversation() {
-
-  if (!auth.currentUser) {
-    throw new Error(
-      "يجب تسجيل الدخول أولًا."
-    );
-  }
-
-  if (currentMessages.length === 0) {
-    return;
-  }
-
-  const firstUserMessage =
-    currentMessages.find(
-      (message) =>
-        message.role === "user"
-    );
-
-  const title =
-    firstUserMessage
-      ? firstUserMessage.content
-          .substring(0, 45)
-      : "محادثة جديدة";
-
-  const conversationData = {
-    title: title,
-    messages: currentMessages,
-    updatedAt: serverTimestamp(),
-    createdAt: serverTimestamp()
-  };
-
-  if (!currentConversationId) {
-
-    const newDoc =
-      await addDoc(
-        conversationsCollection(),
-        conversationData
-      );
-
-    currentConversationId =
-      newDoc.id;
-
-  } else {
-
-    await setDoc(
-      doc(
-        conversationsCollection(),
-        currentConversationId
-      ),
-      {
-        title: title,
-        messages: currentMessages,
-        updatedAt: serverTimestamp()
-      },
-      {
-        merge: true
-      }
-    );
-  }
-
-  chatTitle.textContent =
-    title;
-
-  await loadConversations();
 }
 
 
@@ -675,40 +632,35 @@ async function openConversation(
   conversationId
 ) {
 
+  if (!currentUser) {
+    return;
+  }
+
   try {
 
     const conversationRef =
       doc(
-        conversationsCollection(),
+        db,
+        "users",
+        currentUser.uid,
+        "conversations",
         conversationId
       );
 
     const snapshot =
-      await getDocs(
-        query(
-          conversationsCollection()
-        )
+      await getDoc(
+        conversationRef
       );
 
-    let found = null;
+    if (!snapshot.exists()) {
 
-    snapshot.forEach(
-      (item) => {
+      newConversation();
 
-        if (item.id === conversationId) {
-          found = item;
-        }
-      }
-    );
-
-    if (!found) {
-      throw new Error(
-        "المحادثة غير موجودة."
-      );
+      return;
     }
 
     const data =
-      found.data();
+      snapshot.data();
 
     currentConversationId =
       conversationId;
@@ -718,67 +670,122 @@ async function openConversation(
         ? data.messages
         : [];
 
-    chatTitle.textContent =
-      data.title ||
-      "محادثة جديدة";
-
     renderMessages();
-
-    document
-      .querySelectorAll(".history-item")
-      .forEach(
-        (item) => {
-
-          item.classList.toggle(
-            "active",
-            item.dataset.id ===
-              conversationId
-          );
-        }
-      );
 
   } catch (error) {
 
     console.error(
-      "Open conversation error:",
+      "OPEN CONVERSATION:",
       error
     );
+
   }
 }
 
 
 // ======================================================
-// DELETE CONVERSATION
+// NEW CONVERSATION
 // ======================================================
 
-async function deleteConversation(
-  conversationId
-) {
+function newConversation() {
+
+  currentConversationId =
+    null;
+
+  currentMessages =
+    [];
+
+  renderMessages();
+
+  chatInput.focus();
+}
+
+
+// ======================================================
+// SAVE CONVERSATION
+// ======================================================
+
+async function saveConversation() {
+
+  if (!currentUser) {
+    return;
+  }
+
+  if (
+    currentMessages.length === 0
+  ) {
+    return;
+  }
+
+  const firstUserMessage =
+    currentMessages.find(
+      item =>
+        item.role === "user"
+    );
+
+  const title =
+    firstUserMessage?.content
+      ?.slice(0, 45)
+      ||
+      "محادثة جديدة";
 
   try {
 
-    await deleteDoc(
-      doc(
-        conversationsCollection(),
-        conversationId
-      )
-    );
+    if (!currentConversationId) {
 
-    if (
-      currentConversationId ===
-      conversationId
-    ) {
-      createNewChat();
+      const ref =
+        await addDoc(
+          conversationsCollection(),
+          {
+            title,
+            messages:
+              currentMessages,
+
+            createdAt:
+              serverTimestamp(),
+
+            updatedAt:
+              serverTimestamp()
+          }
+        );
+
+      currentConversationId =
+        ref.id;
+
+    } else {
+
+      await setDoc(
+        doc(
+          db,
+          "users",
+          currentUser.uid,
+          "conversations",
+          currentConversationId
+        ),
+        {
+          title,
+          messages:
+            currentMessages,
+
+          updatedAt:
+            serverTimestamp()
+        },
+        {
+          merge: true
+        }
+      );
+
     }
 
-    await loadConversations();
+    await loadHistory();
 
   } catch (error) {
 
     console.error(
-      "Delete conversation error:",
+      "SAVE CONVERSATION:",
       error
     );
+
   }
 }
 
@@ -789,113 +796,75 @@ async function deleteConversation(
 
 function renderMessages() {
 
-  messagesContainer.innerHTML = "";
+  messagesElement.innerHTML = "";
 
-  if (currentMessages.length === 0) {
+  if (
+    currentMessages.length === 0
+  ) {
 
-    messagesContainer.innerHTML = `
-      <div class="welcome">
-        <h2>محادثة جديدة</h2>
-        <p>اكتب أي شيء تريد أن تسأل عنه.</p>
-      </div>
-    `;
+    messagesElement.appendChild(
+      emptyChat
+    );
 
     return;
   }
 
   currentMessages.forEach(
-    (message) => {
+    message => {
 
-      const wrapper =
-        document.createElement("div");
+      const row =
+        document.createElement(
+          "div"
+        );
 
-      wrapper.className =
-        `message ${
+      row.className =
+        "message-row " +
+        (
           message.role === "user"
             ? "user"
-            : "assistant"
-        }`;
+            : "ai"
+        );
 
       const bubble =
-        document.createElement("div");
+        document.createElement(
+          "div"
+        );
 
       bubble.className =
         "bubble";
 
       bubble.textContent =
-        message.content;
+        message.content || "";
 
-      wrapper.appendChild(bubble);
+      row.appendChild(
+        bubble
+      );
 
-      messagesContainer.appendChild(
-        wrapper
+      messagesElement.appendChild(
+        row
       );
     }
   );
 
-  messagesContainer.scrollTop =
-    messagesContainer.scrollHeight;
+  messagesElement.scrollTop =
+    messagesElement.scrollHeight;
 }
 
 
 // ======================================================
-// ADD MESSAGE TO UI
-// ======================================================
-
-function addMessageToUI(
-  role,
-  content
-) {
-
-  const welcome =
-    messagesContainer.querySelector(
-      ".welcome"
-    );
-
-  if (welcome) {
-    welcome.remove();
-  }
-
-  const wrapper =
-    document.createElement("div");
-
-  wrapper.className =
-    `message ${role}`;
-
-  const bubble =
-    document.createElement("div");
-
-  bubble.className =
-    "bubble";
-
-  bubble.textContent =
-    content;
-
-  wrapper.appendChild(bubble);
-
-  messagesContainer.appendChild(
-    wrapper
-  );
-
-  messagesContainer.scrollTop =
-    messagesContainer.scrollHeight;
-}
-
-
-// ======================================================
-// SEND MESSAGE
+// CHAT
 // ======================================================
 
 async function sendMessage() {
 
   const text =
-    messageInput.value.trim();
+    chatInput.value.trim();
 
   if (!text) {
     return;
   }
 
-  if (!auth.currentUser) {
+  if (!currentUser) {
 
     alert(
       "يجب تسجيل الدخول أولًا."
@@ -904,184 +873,202 @@ async function sendMessage() {
     return;
   }
 
-  messageInput.value = "";
-
-  addMessageToUI(
-    "user",
-    text
-  );
+  chatInput.value = "";
 
   currentMessages.push({
     role: "user",
     content: text
   });
 
-  sendButton.disabled = true;
+  renderMessages();
 
-  const loadingElement =
-    document.createElement("div");
+  sendChatButton.disabled = true;
 
-  loadingElement.className =
-    "message assistant";
-
-  loadingElement.id =
-    "aiLoading";
-
-  loadingElement.innerHTML = `
-    <div class="bubble">
-      جاري التفكير...
-    </div>
-  `;
-
-  messagesContainer.appendChild(
-    loadingElement
-  );
-
-  messagesContainer.scrollTop =
-    messagesContainer.scrollHeight;
+  chatStatus.textContent =
+    "جاري التفكير...";
 
   try {
 
-    // Get fresh Firebase ID token
     const idToken =
-      await auth.currentUser.getIdToken(
+      await currentUser.getIdToken(
         true
       );
 
     const response =
-      await fetch("/api/chat", {
-        method: "POST",
+      await fetch(
+        "/api/chat",
+        {
+          method: "POST",
 
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization":
-            `Bearer ${idToken}`
-        },
+          headers: {
+            "Content-Type":
+              "application/json",
 
-        body: JSON.stringify({
-          messages: currentMessages
-        })
-      });
+            "Authorization":
+              `Bearer ${idToken}`
+          },
+
+          body:
+            JSON.stringify({
+              messages:
+                currentMessages
+            })
+        }
+      );
 
     const data =
       await response.json();
 
-    if (!response.ok || !data.ok) {
+    if (!response.ok) {
+
       throw new Error(
+        data.message ||
         data.error ||
-        "تعذر الحصول على رد من الذكاء الاصطناعي."
+        "حدث خطأ أثناء الاتصال بالذكاء الاصطناعي."
       );
     }
-
-    const loading =
-      document.getElementById(
-        "aiLoading"
-      );
-
-    if (loading) {
-      loading.remove();
-    }
-
-    const answer =
-      data.answer ||
-      "لم يصل رد.";
-
-    addMessageToUI(
-      "assistant",
-      answer
-    );
 
     currentMessages.push({
       role: "assistant",
-      content: answer
+      content:
+        data.reply ||
+        data.message ||
+        "لم يصل رد."
     });
+
+    renderMessages();
 
     await saveConversation();
 
   } catch (error) {
 
     console.error(
-      "Chat error:",
+      "CHAT ERROR:",
       error
     );
 
-    const loading =
-      document.getElementById(
-        "aiLoading"
-      );
+    currentMessages.push({
+      role: "assistant",
+      content:
+        "حدث خطأ: " +
+        error.message
+    });
 
-    if (loading) {
-      loading.remove();
-    }
-
-    addMessageToUI(
-      "assistant",
-      `حدث خطأ: ${error.message}`
-    );
+    renderMessages();
 
   } finally {
 
-    sendButton.disabled = false;
+    sendChatButton.disabled =
+      false;
 
-    messageInput.focus();
+    chatStatus.textContent =
+      "";
+
+    chatInput.focus();
   }
 }
+
+
+// ======================================================
+// LOGOUT
+// ======================================================
+
+async function logout() {
+
+  try {
+
+    await signOut(auth);
+
+  } catch (error) {
+
+    console.error(
+      "LOGOUT:",
+      error
+    );
+
+  }
+}
+
+
+// ======================================================
+// AUTH STATE
+// ======================================================
+
+onAuthStateChanged(
+  auth,
+  async (user) => {
+
+    currentUser =
+      user || null;
+
+    if (user) {
+
+      loginPage.style.display =
+        "none";
+
+      appPage.style.display =
+        "block";
+
+      await loadHistory();
+
+      newConversation();
+
+    } else {
+
+      loginPage.style.display =
+        "flex";
+
+      appPage.style.display =
+        "none";
+
+      currentConversationId =
+        null;
+
+      currentMessages =
+        [];
+
+    }
+  }
+);
 
 
 // ======================================================
 // EVENTS
 // ======================================================
 
-sendButton.addEventListener(
+sendOtpButton.addEventListener(
   "click",
-  sendMessage
+  sendOTP
+);
+
+verifyOtpButton.addEventListener(
+  "click",
+  verifyOTP
+);
+
+backToPhoneButton.addEventListener(
+  "click",
+  backToPhone
 );
 
 newChatButton.addEventListener(
   "click",
-  createNewChat
+  newConversation
 );
 
 logoutButton.addEventListener(
   "click",
-  async () => {
-
-    try {
-
-      await signOut(auth);
-
-      currentPhone = "";
-      currentConversationId = null;
-      currentMessages = [];
-
-      phoneInput.value = "";
-      otpInput.value = "";
-
-      otpStep.classList.add("hidden");
-      phoneStep.classList.remove("hidden");
-
-      setLoginStatus("");
-
-      showLogin();
-
-    } catch (error) {
-
-      console.error(
-        "Logout error:",
-        error
-      );
-    }
-  }
+  logout
 );
 
+sendChatButton.addEventListener(
+  "click",
+  sendMessage
+);
 
-// ======================================================
-// ENTER TO SEND
-// ======================================================
-
-messageInput.addEventListener(
+chatInput.addEventListener(
   "keydown",
-  (event) => {
+  event => {
 
     if (
       event.key === "Enter" &&
@@ -1095,9 +1082,28 @@ messageInput.addEventListener(
   }
 );
 
+otpInput.addEventListener(
+  "keydown",
+  event => {
 
-// ======================================================
-// INITIAL STATE
-// ======================================================
+    if (event.key === "Enter") {
 
-showLogin();
+      event.preventDefault();
+
+      verifyOTP();
+    }
+  }
+);
+
+phoneInput.addEventListener(
+  "keydown",
+  event => {
+
+    if (event.key === "Enter") {
+
+      event.preventDefault();
+
+      sendOTP();
+    }
+  }
+);
