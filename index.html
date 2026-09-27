@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
+
   <meta charset="UTF-8">
 
   <meta
@@ -10,7 +12,6 @@
 
   <title>Chat AI Pro</title>
 
-  <!-- App Icon -->
   <link
     rel="icon"
     type="image/png"
@@ -18,6 +19,7 @@
   >
 
   <style>
+
     * {
       box-sizing: border-box;
       margin: 0;
@@ -34,8 +36,6 @@
       --text: #ffffff;
       --muted: #aebbd0;
       --input: rgba(31, 45, 70, 0.78);
-      --danger: #ff5c70;
-      --success: #35d59a;
     }
 
     html,
@@ -47,6 +47,7 @@
         "Segoe UI",
         Tahoma,
         sans-serif;
+
       background:
         radial-gradient(
           circle at 20% 20%,
@@ -64,6 +65,7 @@
           var(--bg2),
           #090625
         );
+
       color: var(--text);
     }
 
@@ -85,27 +87,36 @@
       display: none !important;
     }
 
-    /* =========================
+    /* ==============================
        LOGIN
-    ========================= */
+    ============================== */
 
     #loginPage {
       min-height: 100vh;
+
       display: flex;
+
       align-items: center;
       justify-content: center;
+
       padding: 25px;
     }
 
     .login-card {
       width: min(500px, 100%);
+
       padding: 38px;
+
       border-radius: 30px;
+
       background: var(--card);
+
       border: 1px solid var(--border);
+
       box-shadow:
         0 30px 90px rgba(0, 0, 0, 0.45),
         inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
       backdrop-filter: blur(25px);
       -webkit-backdrop-filter: blur(25px);
     }
@@ -118,41 +129,57 @@
     .app-logo {
       width: 92px;
       height: 92px;
+
       object-fit: contain;
+
       display: block;
+
       margin: 0 auto 15px;
+
       border-radius: 22px;
-      box-shadow: 0 0 35px rgba(20, 180, 255, 0.18);
+
+      box-shadow:
+        0 0 35px rgba(20, 180, 255, 0.18);
     }
 
     .logo-fallback {
       width: 92px;
       height: 92px;
+
       margin: 0 auto 15px;
+
       border-radius: 22px;
+
       display: none;
+
       align-items: center;
       justify-content: center;
+
       font-size: 38px;
       font-weight: bold;
+
       color: white;
-      background: linear-gradient(
-        135deg,
-        #11baf7,
-        #4264ff
-      );
+
+      background:
+        linear-gradient(
+          135deg,
+          #11baf7,
+          #4264ff
+        );
     }
 
     .app-title {
       font-size: 34px;
       font-weight: 800;
-      letter-spacing: -1px;
     }
 
     .app-subtitle {
       color: var(--muted);
+
       margin-top: 10px;
+
       line-height: 1.8;
+
       font-size: 15px;
     }
 
@@ -162,27 +189,40 @@
 
     .form-group label {
       display: block;
+
       margin-bottom: 9px;
+
       color: #dce8f7;
+
       font-size: 14px;
     }
 
     .input {
       width: 100%;
       height: 58px;
+
       border-radius: 17px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+
+      border: 1px solid rgba(255,255,255,0.1);
+
       background: var(--input);
+
       color: white;
+
       outline: none;
+
       padding: 0 18px;
+
       transition: 0.2s;
     }
 
     .input:focus {
-      border-color: rgba(25, 189, 247, 0.75);
+      border-color:
+        rgba(25, 189, 247, 0.75);
+
       box-shadow:
-        0 0 0 4px rgba(25, 189, 247, 0.08);
+        0 0 0 4px
+        rgba(25, 189, 247, 0.08);
     }
 
     .input::placeholder {
@@ -192,19 +232,27 @@
     .main-button {
       width: 100%;
       height: 58px;
+
       margin-top: 17px;
+
       border-radius: 17px;
+
       color: white;
+
       font-weight: 800;
+
       background:
         linear-gradient(
           100deg,
           var(--blue),
           var(--blue2)
         );
+
       box-shadow:
-        0 10px 30px rgba(39, 127, 255, 0.25);
-      transition: transform 0.15s, opacity 0.15s;
+        0 10px 30px
+        rgba(39, 127, 255, 0.25);
+
+      transition: 0.15s;
     }
 
     .main-button:hover {
@@ -219,47 +267,77 @@
 
     .message {
       margin-top: 15px;
+
       padding: 13px 15px;
+
       border-radius: 14px;
+
       line-height: 1.7;
+
       font-size: 14px;
+
       display: none;
     }
 
     .message.error {
       display: block;
-      background: rgba(255, 70, 90, 0.1);
-      border: 1px solid rgba(255, 70, 90, 0.25);
+
+      background:
+        rgba(255, 70, 90, 0.1);
+
+      border:
+        1px solid
+        rgba(255, 70, 90, 0.25);
+
       color: #ffb6c0;
     }
 
     .message.success {
       display: block;
-      background: rgba(53, 213, 154, 0.1);
-      border: 1px solid rgba(53, 213, 154, 0.25);
+
+      background:
+        rgba(53, 213, 154, 0.1);
+
+      border:
+        1px solid
+        rgba(53, 213, 154, 0.25);
+
       color: #9ff2d0;
     }
 
     .message.info {
       display: block;
-      background: rgba(25, 189, 247, 0.1);
-      border: 1px solid rgba(25, 189, 247, 0.2);
+
+      background:
+        rgba(25, 189, 247, 0.1);
+
+      border:
+        1px solid
+        rgba(25, 189, 247, 0.2);
+
       color: #a9eaff;
     }
 
     .back-button {
       width: 100%;
       height: 48px;
+
       margin-top: 10px;
+
       border-radius: 14px;
+
       background: transparent;
+
       color: #aebbd0;
-      border: 1px solid rgba(255,255,255,0.08);
+
+      border:
+        1px solid
+        rgba(255,255,255,0.08);
     }
 
-    /* =========================
+    /* ==============================
        APP
-    ========================= */
+    ============================== */
 
     #appPage {
       min-height: 100vh;
@@ -268,31 +346,45 @@
 
     .app-layout {
       min-height: 100vh;
+
       display: grid;
+
       grid-template-columns: 280px 1fr;
     }
 
     .sidebar {
-      border-left: 1px solid rgba(255,255,255,0.07);
-      background: rgba(3, 12, 28, 0.82);
+      border-left:
+        1px solid
+        rgba(255,255,255,0.07);
+
+      background:
+        rgba(3, 12, 28, 0.82);
+
       backdrop-filter: blur(25px);
-      -webkit-backdrop-filter: blur(25px);
+
       padding: 20px;
+
       display: flex;
+
       flex-direction: column;
     }
 
     .sidebar-logo {
       display: flex;
+
       align-items: center;
+
       gap: 11px;
+
       margin-bottom: 20px;
     }
 
     .sidebar-logo img {
       width: 43px;
       height: 43px;
+
       border-radius: 12px;
+
       object-fit: contain;
     }
 
@@ -304,21 +396,30 @@
     .new-chat {
       width: 100%;
       height: 48px;
+
       border-radius: 14px;
-      background: linear-gradient(
-        100deg,
-        var(--blue),
-        var(--blue2)
-      );
+
+      background:
+        linear-gradient(
+          100deg,
+          var(--blue),
+          var(--blue2)
+        );
+
       color: white;
+
       font-weight: 800;
+
       margin-bottom: 18px;
     }
 
     .history-title {
       color: #7f8da4;
+
       font-size: 12px;
-      margin: 5px 4px 10px;
+
+      margin:
+        5px 4px 10px;
     }
 
     .history {
@@ -328,44 +429,74 @@
 
     .history-item {
       width: 100%;
+
       text-align: right;
+
       color: #dbe6f6;
+
       background: transparent;
+
       padding: 12px;
+
       border-radius: 12px;
+
       margin-bottom: 5px;
+
       white-space: nowrap;
+
       overflow: hidden;
+
       text-overflow: ellipsis;
     }
 
     .history-item:hover {
-      background: rgba(255,255,255,0.06);
+      background:
+        rgba(255,255,255,0.06);
     }
 
     .logout {
       margin-top: 15px;
+
       height: 45px;
+
       border-radius: 13px;
+
       color: #ffb1bb;
-      background: rgba(255, 80, 100, 0.08);
-      border: 1px solid rgba(255, 80, 100, 0.13);
+
+      background:
+        rgba(255,80,100,0.08);
+
+      border:
+        1px solid
+        rgba(255,80,100,0.13);
     }
 
     .chat-area {
       min-width: 0;
+
       display: flex;
+
       flex-direction: column;
+
       min-height: 100vh;
     }
 
     .topbar {
       height: 70px;
+
       display: flex;
+
       align-items: center;
+
       padding: 0 25px;
-      border-bottom: 1px solid rgba(255,255,255,0.07);
-      background: rgba(4, 13, 30, 0.55);
+
+      border-bottom:
+        1px solid
+        rgba(255,255,255,0.07);
+
+      background:
+        rgba(4,13,30,0.55);
+
       backdrop-filter: blur(20px);
     }
 
@@ -376,16 +507,23 @@
 
     .messages {
       flex: 1;
+
       overflow-y: auto;
+
       padding: 30px;
     }
 
     .empty-chat {
       min-height: 60vh;
+
       display: flex;
+
       align-items: center;
+
       justify-content: center;
+
       text-align: center;
+
       color: #8493a9;
     }
 
@@ -396,7 +534,10 @@
 
     .message-row {
       max-width: 900px;
-      margin: 0 auto 20px;
+
+      margin:
+        0 auto 20px;
+
       display: flex;
     }
 
@@ -409,11 +550,18 @@
     }
 
     .bubble {
-      max-width: min(80%, 720px);
-      padding: 15px 18px;
+      max-width:
+        min(80%, 720px);
+
+      padding:
+        15px 18px;
+
       border-radius: 20px;
+
       line-height: 1.85;
+
       white-space: pre-wrap;
+
       word-break: break-word;
     }
 
@@ -421,67 +569,101 @@
       background:
         linear-gradient(
           135deg,
-          rgba(24, 180, 245, 0.25),
-          rgba(64, 91, 255, 0.22)
+          rgba(24,180,245,0.25),
+          rgba(64,91,255,0.22)
         );
-      border: 1px solid rgba(46, 175, 255, 0.2);
+
+      border:
+        1px solid
+        rgba(46,175,255,0.2);
     }
 
     .ai .bubble {
-      background: rgba(255,255,255,0.055);
-      border: 1px solid rgba(255,255,255,0.08);
+      background:
+        rgba(255,255,255,0.055);
+
+      border:
+        1px solid
+        rgba(255,255,255,0.08);
     }
 
     .composer {
-      padding: 18px 25px 25px;
-      background: linear-gradient(
-        transparent,
-        rgba(2, 9, 20, 0.92)
-      );
+      padding:
+        18px 25px 25px;
+
+      background:
+        linear-gradient(
+          transparent,
+          rgba(2,9,20,0.92)
+        );
     }
 
     .composer-inner {
       max-width: 900px;
+
       margin: auto;
+
       display: flex;
+
       gap: 10px;
     }
 
     .chat-input {
       flex: 1;
+
       min-width: 0;
+
       height: 55px;
+
       border-radius: 17px;
-      background: rgba(25, 39, 63, 0.82);
-      border: 1px solid rgba(255,255,255,0.08);
+
+      background:
+        rgba(25,39,63,0.82);
+
+      border:
+        1px solid
+        rgba(255,255,255,0.08);
+
       color: white;
+
       padding: 0 18px;
+
       outline: none;
     }
 
     .send-button {
       width: 58px;
       height: 55px;
+
       border-radius: 17px;
+
       color: white;
-      background: linear-gradient(
-        135deg,
-        var(--blue),
-        var(--blue2)
-      );
+
+      background:
+        linear-gradient(
+          135deg,
+          var(--blue),
+          var(--blue2)
+        );
+
       font-size: 21px;
-      font-weight: bold;
     }
 
     .status {
       max-width: 900px;
-      margin: 7px auto 0;
+
+      margin:
+        7px auto 0;
+
       color: #7e8da3;
+
       font-size: 12px;
+
       min-height: 18px;
     }
 
     @media (max-width: 800px) {
+
       .app-layout {
         grid-template-columns: 1fr;
       }
@@ -510,249 +692,273 @@
         font-size: 29px;
       }
     }
+
   </style>
+
 </head>
+
 
 <body>
 
-  <!-- =========================
-       LOGIN PAGE
-  ========================= -->
 
-  <section id="loginPage">
+<!-- ==================================================
+     LOGIN
+================================================== -->
 
-    <div class="login-card">
+<section id="loginPage">
 
-      <div class="logo-wrapper">
+  <div class="login-card">
+
+    <div class="logo-wrapper">
+
+      <img
+        id="loginLogo"
+        class="app-logo"
+        src="/icon.png"
+        alt="Chat AI Pro"
+        onerror="handleLogoError(this)"
+      >
+
+      <div
+        id="logoFallback"
+        class="logo-fallback"
+      >
+        AI
+      </div>
+
+      <div class="app-title">
+        Chat AI Pro
+      </div>
+
+      <div class="app-subtitle">
+        سجّل الدخول باستخدام رقم هاتفك
+      </div>
+
+    </div>
+
+
+    <!-- PHONE -->
+
+    <div id="phoneSection">
+
+      <div class="form-group">
+
+        <label for="phoneInput">
+          رقم الهاتف
+        </label>
+
+        <input
+          id="phoneInput"
+          class="input"
+          type="tel"
+          inputmode="tel"
+          autocomplete="tel"
+          placeholder="+9665XXXXXXXX"
+        >
+
+      </div>
+
+      <button
+        id="sendOtpButton"
+        class="main-button"
+        type="button"
+      >
+        إرسال رمز التحقق
+      </button>
+
+    </div>
+
+
+    <!-- OTP -->
+
+    <div
+      id="otpSection"
+      class="hidden"
+    >
+
+      <div class="form-group">
+
+        <label for="otpInput">
+          رمز التحقق
+        </label>
+
+        <input
+          id="otpInput"
+          class="input"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          maxlength="10"
+          placeholder="أدخل الرمز الذي وصلك على WhatsApp"
+        >
+
+      </div>
+
+      <button
+        id="verifyOtpButton"
+        class="main-button"
+        type="button"
+      >
+        تأكيد الرمز
+      </button>
+
+      <button
+        id="backToPhoneButton"
+        class="back-button"
+        type="button"
+      >
+        تغيير رقم الهاتف
+      </button>
+
+    </div>
+
+
+    <div
+      id="authMessage"
+      class="message"
+    ></div>
+
+  </div>
+
+</section>
+
+
+<!-- ==================================================
+     APP
+================================================== -->
+
+<section id="appPage">
+
+  <div class="app-layout">
+
+
+    <aside class="sidebar">
+
+      <div class="sidebar-logo">
 
         <img
-          id="loginLogo"
-          class="app-logo"
           src="/icon.png"
           alt="Chat AI Pro"
-          onerror="handleLogoError(this)"
         >
 
-        <div
-          id="logoFallback"
-          class="logo-fallback"
-        >
-          AI
-        </div>
+        <span>
+          Chat AI Pro
+        </span>
 
-        <div class="app-title">
+      </div>
+
+
+      <button
+        id="newChatButton"
+        class="new-chat"
+        type="button"
+      >
+        + محادثة جديدة
+      </button>
+
+
+      <div class="history-title">
+        المحادثات السابقة
+      </div>
+
+
+      <div
+        id="history"
+        class="history"
+      ></div>
+
+
+      <button
+        id="logoutButton"
+        class="logout"
+        type="button"
+      >
+        تسجيل الخروج
+      </button>
+
+    </aside>
+
+
+    <main class="chat-area">
+
+
+      <header class="topbar">
+
+        <div class="topbar-title">
           Chat AI Pro
         </div>
 
-        <div class="app-subtitle">
-          سجّل الدخول باستخدام رقم هاتفك
-        </div>
+      </header>
 
-      </div>
-
-      <!-- PHONE -->
-
-      <div id="phoneSection">
-
-        <div class="form-group">
-
-          <label for="phoneInput">
-            رقم الهاتف
-          </label>
-
-          <input
-            id="phoneInput"
-            class="input"
-            type="tel"
-            inputmode="tel"
-            autocomplete="tel"
-            placeholder="+9665XXXXXXXX"
-          >
-
-        </div>
-
-        <button
-          id="sendOtpButton"
-          class="main-button"
-          type="button"
-        >
-          إرسال رمز التحقق
-        </button>
-
-      </div>
-
-      <!-- OTP -->
-
-      <div id="otpSection" class="hidden">
-
-        <div class="form-group">
-
-          <label for="otpInput">
-            رمز التحقق
-          </label>
-
-          <input
-            id="otpInput"
-            class="input"
-            type="text"
-            inputmode="numeric"
-            autocomplete="one-time-code"
-            maxlength="10"
-            placeholder="أدخل الرمز الذي وصلك على WhatsApp"
-          >
-
-        </div>
-
-        <button
-          id="verifyOtpButton"
-          class="main-button"
-          type="button"
-        >
-          تأكيد الرمز
-        </button>
-
-        <button
-          id="backToPhoneButton"
-          class="back-button"
-          type="button"
-        >
-          تغيير رقم الهاتف
-        </button>
-
-      </div>
 
       <div
-        id="authMessage"
-        class="message"
-      ></div>
-
-    </div>
-
-  </section>
-
-
-  <!-- =========================
-       APP PAGE
-  ========================= -->
-
-  <section id="appPage">
-
-    <div class="app-layout">
-
-      <aside class="sidebar">
-
-        <div class="sidebar-logo">
-
-          <img
-            src="/icon.png"
-            alt="Chat AI Pro"
-            onerror="handleLogoError(this)"
-          >
-
-          <span>
-            Chat AI Pro
-          </span>
-
-        </div>
-
-        <button
-          id="newChatButton"
-          class="new-chat"
-          type="button"
-        >
-          + محادثة جديدة
-        </button>
-
-        <div class="history-title">
-          المحادثات السابقة
-        </div>
+        id="messages"
+        class="messages"
+      >
 
         <div
-          id="history"
-          class="history"
+          id="emptyChat"
+          class="empty-chat"
+        >
+
+          <div>
+
+            <h2>
+              مرحبًا بك في Chat AI Pro
+            </h2>
+
+            <p>
+              اكتب رسالتك لبدء المحادثة مع الذكاء الاصطناعي.
+            </p>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div class="composer">
+
+        <div class="composer-inner">
+
+          <input
+            id="chatInput"
+            class="chat-input"
+            type="text"
+            autocomplete="off"
+            placeholder="اكتب رسالتك..."
+          >
+
+          <button
+            id="sendChatButton"
+            class="send-button"
+            type="button"
+          >
+            ➤
+          </button>
+
+        </div>
+
+
+        <div
+          id="chatStatus"
+          class="status"
         ></div>
 
-        <button
-          id="logoutButton"
-          class="logout"
-          type="button"
-        >
-          تسجيل الخروج
-        </button>
+      </div>
 
-      </aside>
+    </main>
+
+  </div>
+
+</section>
 
 
-      <main class="chat-area">
-
-        <header class="topbar">
-
-          <div class="topbar-title">
-            Chat AI Pro
-          </div>
-
-        </header>
-
-
-        <div
-          id="messages"
-          class="messages"
-        >
-
-          <div
-            id="emptyChat"
-            class="empty-chat"
-          >
-            <div>
-              <h2>مرحبًا بك في Chat AI Pro</h2>
-              <p>
-                اكتب رسالتك لبدء المحادثة مع الذكاء الاصطناعي.
-              </p>
-            </div>
-          </div>
-
-        </div>
-
-
-        <div class="composer">
-
-          <div class="composer-inner">
-
-            <input
-              id="chatInput"
-              class="chat-input"
-              type="text"
-              autocomplete="off"
-              placeholder="اكتب رسالتك..."
-            >
-
-            <button
-              id="sendChatButton"
-              class="send-button"
-              type="button"
-              aria-label="إرسال"
-            >
-              ➤
-            </button>
-
-          </div>
-
-          <div
-            id="chatStatus"
-            class="status"
-          ></div>
-
-        </div>
-
-      </main>
-
-    </div>
-
-  </section>
-
-
-  <!-- Firebase + Application -->
-  <script type="module" src="/script.js"></script>
+<script
+  type="module"
+  src="/script.js"
+></script>
 
 </body>
 </html>
