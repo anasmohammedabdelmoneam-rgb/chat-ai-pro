@@ -27,19 +27,14 @@ import {
 // FIREBASE WEB CONFIG
 // ======================================================
 //
-// ضع هنا بيانات Web App من:
-// Firebase Console
-// Project Settings
-// General
-// Your apps
-// Web app
-//
+// ضع بيانات Web App الخاصة بمشروع Firebase هنا.
 // لا تضع FIREBASE_PRIVATE_KEY هنا.
 // ======================================================
 
 const firebaseConfig = {
 
-  apiKey: "ضع_API_KEY_هنا",
+  apiKey:
+    "ضع_API_KEY_هنا",
 
   authDomain:
     "ضع_PROJECT_ID_هنا.firebaseapp.com",
@@ -60,7 +55,7 @@ const firebaseConfig = {
 
 
 // ======================================================
-// FIREBASE INIT
+// INIT
 // ======================================================
 
 const firebaseApp =
@@ -74,7 +69,7 @@ const db =
 
 
 // ======================================================
-// GLOBAL STATE
+// STATE
 // ======================================================
 
 let currentUser = null;
@@ -91,79 +86,120 @@ let pendingPhone = "";
 // ======================================================
 
 const loginPage =
-  document.getElementById("loginPage");
+  document.getElementById(
+    "loginPage"
+  );
 
 const appPage =
-  document.getElementById("appPage");
+  document.getElementById(
+    "appPage"
+  );
 
 const phoneSection =
-  document.getElementById("phoneSection");
+  document.getElementById(
+    "phoneSection"
+  );
 
 const otpSection =
-  document.getElementById("otpSection");
+  document.getElementById(
+    "otpSection"
+  );
 
 const phoneInput =
-  document.getElementById("phoneInput");
+  document.getElementById(
+    "phoneInput"
+  );
 
 const otpInput =
-  document.getElementById("otpInput");
+  document.getElementById(
+    "otpInput"
+  );
 
 const sendOtpButton =
-  document.getElementById("sendOtpButton");
+  document.getElementById(
+    "sendOtpButton"
+  );
 
 const verifyOtpButton =
-  document.getElementById("verifyOtpButton");
+  document.getElementById(
+    "verifyOtpButton"
+  );
 
 const backToPhoneButton =
-  document.getElementById("backToPhoneButton");
+  document.getElementById(
+    "backToPhoneButton"
+  );
 
 const authMessage =
-  document.getElementById("authMessage");
+  document.getElementById(
+    "authMessage"
+  );
 
 const historyElement =
-  document.getElementById("history");
+  document.getElementById(
+    "history"
+  );
 
 const messagesElement =
-  document.getElementById("messages");
+  document.getElementById(
+    "messages"
+  );
 
 const emptyChat =
-  document.getElementById("emptyChat");
+  document.getElementById(
+    "emptyChat"
+  );
 
 const chatInput =
-  document.getElementById("chatInput");
+  document.getElementById(
+    "chatInput"
+  );
 
 const sendChatButton =
-  document.getElementById("sendChatButton");
+  document.getElementById(
+    "sendChatButton"
+  );
 
 const chatStatus =
-  document.getElementById("chatStatus");
+  document.getElementById(
+    "chatStatus"
+  );
 
 const newChatButton =
-  document.getElementById("newChatButton");
+  document.getElementById(
+    "newChatButton"
+  );
 
 const logoutButton =
-  document.getElementById("logoutButton");
+  document.getElementById(
+    "logoutButton"
+  );
 
 
 // ======================================================
-// LOGO ERROR
+// LOGO FALLBACK
 // ======================================================
 
-window.handleLogoError = function (image) {
+window.handleLogoError =
+  function (image) {
 
-  image.style.display = "none";
+    image.style.display =
+      "none";
 
-  const fallback =
-    document.getElementById("logoFallback");
+    const fallback =
+      document.getElementById(
+        "logoFallback"
+      );
 
-  if (fallback) {
-    fallback.style.display = "flex";
-  }
-};
+    if (fallback) {
+      fallback.style.display =
+        "flex";
+    }
+  };
 
 
 // ======================================================
-// MESSAGE
+// AUTH MESSAGE
 // ======================================================
 
 function showAuthMessage(
@@ -181,7 +217,8 @@ function showAuthMessage(
 
 function clearAuthMessage() {
 
-  authMessage.textContent = "";
+  authMessage.textContent =
+    "";
 
   authMessage.className =
     "message";
@@ -192,14 +229,16 @@ function clearAuthMessage() {
 // PHONE NORMALIZATION
 // ======================================================
 
-function normalizeSaudiPhone(value) {
+function normalizeSaudiPhone(
+  value
+) {
 
   let phone =
     String(value || "")
       .trim()
       .replace(/[^\d+]/g, "");
 
-  // 05XXXXXXXX
+
   if (
     phone.startsWith("05") &&
     phone.length === 10
@@ -208,10 +247,8 @@ function normalizeSaudiPhone(value) {
     phone =
       "+966" +
       phone.substring(1);
-  }
 
-  // 5XXXXXXXX
-  else if (
+  } else if (
     phone.startsWith("5") &&
     phone.length === 9
   ) {
@@ -219,10 +256,8 @@ function normalizeSaudiPhone(value) {
     phone =
       "+966" +
       phone;
-  }
 
-  // 9665XXXXXXXX
-  else if (
+  } else if (
     phone.startsWith("9665") &&
     phone.length === 12
   ) {
@@ -232,18 +267,57 @@ function normalizeSaudiPhone(value) {
       phone;
   }
 
+
   return phone;
 }
 
 
-function isValidSaudiPhone(phone) {
+function isValidSaudiPhone(
+  phone
+) {
 
-  return /^\+9665\d{8}$/.test(phone);
+  return /^\+9665\d{8}$/.test(
+    phone
+  );
 }
 
 
 // ======================================================
-// API HELPER
+// OTP NORMALIZATION
+// ======================================================
+
+function normalizeOtp(
+  value
+) {
+
+  const arabicNumbers = {
+    "٠": "0",
+    "١": "1",
+    "٢": "2",
+    "٣": "3",
+    "٤": "4",
+    "٥": "5",
+    "٦": "6",
+    "٧": "7",
+    "٨": "8",
+    "٩": "9"
+  };
+
+  return String(value || "")
+    .split("")
+    .map(
+      char =>
+        arabicNumbers[char] ||
+        char
+    )
+    .join("")
+    .replace(/\D/g, "")
+    .trim();
+}
+
+
+// ======================================================
+// API
 // ======================================================
 
 async function apiRequest(
@@ -252,23 +326,27 @@ async function apiRequest(
 ) {
 
   const response =
-    await fetch(url, {
+    await fetch(
+      url,
+      {
+        ...options,
 
-      ...options,
+        headers: {
+          "Content-Type":
+            "application/json",
 
-      headers: {
-        "Content-Type":
-          "application/json",
-
-        ...(options.headers || {})
+          ...(options.headers || {})
+        }
       }
+    );
 
-    });
 
   const text =
     await response.text();
 
-  let data = null;
+
+  let data = {};
+
 
   try {
 
@@ -282,8 +360,8 @@ async function apiRequest(
     data = {
       raw: text
     };
-
   }
+
 
   if (!response.ok) {
 
@@ -291,7 +369,6 @@ async function apiRequest(
       new Error(
         data?.message ||
         data?.error ||
-        data?.details ||
         data?.raw ||
         `HTTP ${response.status}`
       );
@@ -305,6 +382,7 @@ async function apiRequest(
     throw error;
   }
 
+
   return data;
 }
 
@@ -317,25 +395,30 @@ async function sendOTP() {
 
   clearAuthMessage();
 
+
   const phone =
     normalizeSaudiPhone(
       phoneInput.value
     );
 
+
   if (!isValidSaudiPhone(phone)) {
 
     showAuthMessage(
-      "اكتب رقمًا سعوديًا صحيحًا مثل +9665XXXXXXXX",
+      "اكتب رقمًا سعوديًا صحيحًا مثل +9665XXXXXXXX.",
       "error"
     );
 
     return;
   }
 
-  sendOtpButton.disabled = true;
+
+  sendOtpButton.disabled =
+    true;
 
   sendOtpButton.textContent =
     "جارٍ إرسال الرمز...";
+
 
   try {
 
@@ -345,17 +428,21 @@ async function sendOTP() {
         {
           method: "POST",
 
-          body: JSON.stringify({
-            phone
-          })
+          body:
+            JSON.stringify({
+              phone
+            })
         }
       );
+
 
     pendingPhone =
       phone;
 
+
     phoneInput.value =
       phone;
+
 
     phoneSection.classList.add(
       "hidden"
@@ -365,13 +452,16 @@ async function sendOTP() {
       "hidden"
     );
 
+
     showAuthMessage(
       result.message ||
       "تم إرسال رمز التحقق إلى WhatsApp.",
       "success"
     );
 
+
     otpInput.focus();
+
 
   } catch (error) {
 
@@ -380,15 +470,18 @@ async function sendOTP() {
       error
     );
 
+
     showAuthMessage(
       error.message ||
       "تعذر إرسال رمز WhatsApp.",
       "error"
     );
 
+
   } finally {
 
-    sendOtpButton.disabled = false;
+    sendOtpButton.disabled =
+      false;
 
     sendOtpButton.textContent =
       "إرسال رمز التحقق";
@@ -404,10 +497,12 @@ async function verifyOTP() {
 
   clearAuthMessage();
 
+
   const otp =
-    String(
-      otpInput.value || ""
-    ).trim();
+    normalizeOtp(
+      otpInput.value
+    );
+
 
   if (!pendingPhone) {
 
@@ -419,20 +514,26 @@ async function verifyOTP() {
     return;
   }
 
-  if (!otp) {
+
+  if (
+    !/^\d{4,8}$/.test(otp)
+  ) {
 
     showAuthMessage(
-      "اكتب رمز التحقق.",
+      "اكتب رمز التحقق كما وصلك في WhatsApp.",
       "error"
     );
 
     return;
   }
 
-  verifyOtpButton.disabled = true;
+
+  verifyOtpButton.disabled =
+    true;
 
   verifyOtpButton.textContent =
     "جارٍ التحقق...";
+
 
   try {
 
@@ -442,12 +543,17 @@ async function verifyOTP() {
         {
           method: "POST",
 
-          body: JSON.stringify({
-            phone: pendingPhone,
-            otp
-          })
+          body:
+            JSON.stringify({
+              phone:
+                pendingPhone,
+
+              otp:
+                otp
+            })
         }
       );
+
 
     if (!result.token) {
 
@@ -456,15 +562,18 @@ async function verifyOTP() {
       );
     }
 
+
     await signInWithCustomToken(
       auth,
       result.token
     );
 
+
     showAuthMessage(
       "تم تسجيل الدخول بنجاح.",
       "success"
     );
+
 
   } catch (error) {
 
@@ -473,38 +582,18 @@ async function verifyOTP() {
       error
     );
 
-    let message =
-      error.message ||
-      "تعذر التحقق من الرمز.";
-
-    if (
-      error.code ===
-      "auth/invalid-custom-token"
-    ) {
-
-      message =
-        "Firebase رفض رمز تسجيل الدخول. تأكد أن Web App وRender يستخدمان نفس مشروع Firebase.";
-
-    }
-
-    if (
-      error.code ===
-      "auth/custom-token-mismatch"
-    ) {
-
-      message =
-        "هناك اختلاف بين مشروع Firebase الموجود في الواجهة ومشروع Firebase الموجود في Render.";
-
-    }
 
     showAuthMessage(
-      message,
+      error.message ||
+      "تعذر التحقق من الرمز.",
       "error"
     );
 
+
   } finally {
 
-    verifyOtpButton.disabled = false;
+    verifyOtpButton.disabled =
+      false;
 
     verifyOtpButton.textContent =
       "تأكيد الرمز";
@@ -513,7 +602,7 @@ async function verifyOTP() {
 
 
 // ======================================================
-// BACK
+// BACK TO PHONE
 // ======================================================
 
 function backToPhone() {
@@ -526,25 +615,29 @@ function backToPhone() {
     "hidden"
   );
 
-  otpInput.value = "";
+  otpInput.value =
+    "";
 
-  pendingPhone = "";
+  pendingPhone =
+    "";
 
   clearAuthMessage();
 }
 
 
 // ======================================================
-// FIRESTORE
+// FIRESTORE COLLECTION
 // ======================================================
 
 function conversationsCollection() {
 
   if (!currentUser) {
+
     throw new Error(
       "المستخدم غير مسجل الدخول."
     );
   }
+
 
   return collection(
     db,
@@ -565,7 +658,10 @@ async function loadHistory() {
     return;
   }
 
-  historyElement.innerHTML = "";
+
+  historyElement.innerHTML =
+    "";
+
 
   try {
 
@@ -578,26 +674,32 @@ async function loadHistory() {
         )
       );
 
+
     const snapshot =
       await getDocs(q);
 
+
     snapshot.forEach(
-      (item) => {
+      item => {
 
         const data =
           item.data();
+
 
         const button =
           document.createElement(
             "button"
           );
 
+
         button.className =
           "history-item";
+
 
         button.textContent =
           data.title ||
           "محادثة جديدة";
+
 
         button.addEventListener(
           "click",
@@ -607,11 +709,13 @@ async function loadHistory() {
             )
         );
 
+
         historyElement.appendChild(
           button
         );
       }
     );
+
 
   } catch (error) {
 
@@ -619,7 +723,6 @@ async function loadHistory() {
       "LOAD HISTORY:",
       error
     );
-
   }
 }
 
@@ -636,6 +739,7 @@ async function openConversation(
     return;
   }
 
+
   try {
 
     const conversationRef =
@@ -647,10 +751,12 @@ async function openConversation(
         conversationId
       );
 
+
     const snapshot =
       await getDoc(
         conversationRef
       );
+
 
     if (!snapshot.exists()) {
 
@@ -659,18 +765,23 @@ async function openConversation(
       return;
     }
 
+
     const data =
       snapshot.data();
 
+
     currentConversationId =
       conversationId;
+
 
     currentMessages =
       Array.isArray(data.messages)
         ? data.messages
         : [];
 
+
     renderMessages();
+
 
   } catch (error) {
 
@@ -678,7 +789,6 @@ async function openConversation(
       "OPEN CONVERSATION:",
       error
     );
-
   }
 }
 
@@ -711,11 +821,13 @@ async function saveConversation() {
     return;
   }
 
+
   if (
     currentMessages.length === 0
   ) {
     return;
   }
+
 
   const firstUserMessage =
     currentMessages.find(
@@ -723,11 +835,12 @@ async function saveConversation() {
         item.role === "user"
     );
 
+
   const title =
     firstUserMessage?.content
-      ?.slice(0, 45)
-      ||
-      "محادثة جديدة";
+      ?.slice(0, 45) ||
+    "محادثة جديدة";
+
 
   try {
 
@@ -738,6 +851,7 @@ async function saveConversation() {
           conversationsCollection(),
           {
             title,
+
             messages:
               currentMessages,
 
@@ -749,12 +863,15 @@ async function saveConversation() {
           }
         );
 
+
       currentConversationId =
         ref.id;
+
 
     } else {
 
       await setDoc(
+
         doc(
           db,
           "users",
@@ -762,22 +879,27 @@ async function saveConversation() {
           "conversations",
           currentConversationId
         ),
+
         {
           title,
+
           messages:
             currentMessages,
 
           updatedAt:
             serverTimestamp()
         },
+
         {
           merge: true
         }
-      );
 
+      );
     }
 
+
     await loadHistory();
+
 
   } catch (error) {
 
@@ -785,7 +907,6 @@ async function saveConversation() {
       "SAVE CONVERSATION:",
       error
     );
-
   }
 }
 
@@ -796,7 +917,9 @@ async function saveConversation() {
 
 function renderMessages() {
 
-  messagesElement.innerHTML = "";
+  messagesElement.innerHTML =
+    "";
+
 
   if (
     currentMessages.length === 0
@@ -809,6 +932,7 @@ function renderMessages() {
     return;
   }
 
+
   currentMessages.forEach(
     message => {
 
@@ -816,6 +940,7 @@ function renderMessages() {
         document.createElement(
           "div"
         );
+
 
       row.className =
         "message-row " +
@@ -825,26 +950,33 @@ function renderMessages() {
             : "ai"
         );
 
+
       const bubble =
         document.createElement(
           "div"
         );
 
+
       bubble.className =
         "bubble";
 
+
       bubble.textContent =
-        message.content || "";
+        message.content ||
+        "";
+
 
       row.appendChild(
         bubble
       );
+
 
       messagesElement.appendChild(
         row
       );
     }
   );
+
 
   messagesElement.scrollTop =
     messagesElement.scrollHeight;
@@ -860,9 +992,11 @@ async function sendMessage() {
   const text =
     chatInput.value.trim();
 
+
   if (!text) {
     return;
   }
+
 
   if (!currentUser) {
 
@@ -873,19 +1007,27 @@ async function sendMessage() {
     return;
   }
 
-  chatInput.value = "";
+
+  chatInput.value =
+    "";
+
 
   currentMessages.push({
     role: "user",
     content: text
   });
 
+
   renderMessages();
 
-  sendChatButton.disabled = true;
+
+  sendChatButton.disabled =
+    true;
+
 
   chatStatus.textContent =
     "جاري التفكير...";
+
 
   try {
 
@@ -893,6 +1035,7 @@ async function sendMessage() {
       await currentUser.getIdToken(
         true
       );
+
 
     const response =
       await fetch(
@@ -916,8 +1059,10 @@ async function sendMessage() {
         }
       );
 
+
     const data =
       await response.json();
+
 
     if (!response.ok) {
 
@@ -928,17 +1073,25 @@ async function sendMessage() {
       );
     }
 
+
     currentMessages.push({
-      role: "assistant",
+
+      role:
+        "assistant",
+
       content:
         data.reply ||
         data.message ||
         "لم يصل رد."
+
     });
+
 
     renderMessages();
 
+
     await saveConversation();
+
 
   } catch (error) {
 
@@ -947,14 +1100,21 @@ async function sendMessage() {
       error
     );
 
+
     currentMessages.push({
-      role: "assistant",
+
+      role:
+        "assistant",
+
       content:
         "حدث خطأ: " +
         error.message
+
     });
 
+
     renderMessages();
+
 
   } finally {
 
@@ -985,7 +1145,6 @@ async function logout() {
       "LOGOUT:",
       error
     );
-
   }
 }
 
@@ -996,10 +1155,12 @@ async function logout() {
 
 onAuthStateChanged(
   auth,
-  async (user) => {
+
+  async user => {
 
     currentUser =
       user || null;
+
 
     if (user) {
 
@@ -1009,9 +1170,12 @@ onAuthStateChanged(
       appPage.style.display =
         "block";
 
+
       await loadHistory();
 
+
       newConversation();
+
 
     } else {
 
@@ -1021,12 +1185,12 @@ onAuthStateChanged(
       appPage.style.display =
         "none";
 
+
       currentConversationId =
         null;
 
       currentMessages =
         [];
-
     }
   }
 );
@@ -1066,6 +1230,7 @@ sendChatButton.addEventListener(
   sendMessage
 );
 
+
 chatInput.addEventListener(
   "keydown",
   event => {
@@ -1082,6 +1247,7 @@ chatInput.addEventListener(
   }
 );
 
+
 otpInput.addEventListener(
   "keydown",
   event => {
@@ -1094,6 +1260,7 @@ otpInput.addEventListener(
     }
   }
 );
+
 
 phoneInput.addEventListener(
   "keydown",
