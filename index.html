@@ -2,10 +2,20 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
   <title>Chat AI Pro</title>
 
-  <link rel="icon" href="/logo.png">
+  <!-- App Icon -->
+  <link
+    rel="icon"
+    type="image/png"
+    href="/icon.png"
+  >
 
   <style>
     * {
@@ -14,224 +24,339 @@
       padding: 0;
     }
 
+    :root {
+      --bg1: #020b18;
+      --bg2: #07152d;
+      --card: rgba(10, 23, 47, 0.78);
+      --border: rgba(74, 173, 255, 0.28);
+      --blue: #19bdf7;
+      --blue2: #4169ff;
+      --text: #ffffff;
+      --muted: #aebbd0;
+      --input: rgba(31, 45, 70, 0.78);
+      --danger: #ff5c70;
+      --success: #35d59a;
+    }
+
+    html,
     body {
-      font-family: Arial, sans-serif;
-      min-height: 100vh;
+      width: 100%;
+      min-height: 100%;
+      font-family:
+        Arial,
+        "Segoe UI",
+        Tahoma,
+        sans-serif;
       background:
-        radial-gradient(circle at 20% 20%, rgba(0, 200, 255, .18), transparent 30%),
-        radial-gradient(circle at 80% 80%, rgba(80, 50, 255, .18), transparent 30%),
-        linear-gradient(135deg, #02030a, #06152c, #02030a);
-      color: white;
-      overflow: hidden;
+        radial-gradient(
+          circle at 20% 20%,
+          rgba(0, 184, 255, 0.12),
+          transparent 35%
+        ),
+        radial-gradient(
+          circle at 80% 80%,
+          rgba(77, 51, 255, 0.15),
+          transparent 40%
+        ),
+        linear-gradient(
+          135deg,
+          var(--bg1),
+          var(--bg2),
+          #090625
+        );
+      color: var(--text);
+    }
+
+    body {
+      min-height: 100vh;
     }
 
     button,
-    input,
-    textarea {
-      font-family: inherit;
+    input {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border: 0;
     }
 
     .hidden {
       display: none !important;
     }
 
-    /* ================= LOGIN ================= */
+    /* =========================
+       LOGIN
+    ========================= */
 
-    #loginScreen {
+    #loginPage {
       min-height: 100vh;
       display: flex;
-      justify-content: center;
       align-items: center;
-      padding: 20px;
+      justify-content: center;
+      padding: 25px;
     }
 
     .login-card {
-      width: 100%;
-      max-width: 430px;
-      padding: 35px;
-      border-radius: 28px;
-      background: rgba(10, 20, 40, .62);
-      border: 1px solid rgba(100, 210, 255, .25);
-      backdrop-filter: blur(25px);
+      width: min(500px, 100%);
+      padding: 38px;
+      border-radius: 30px;
+      background: var(--card);
+      border: 1px solid var(--border);
       box-shadow:
-        0 0 50px rgba(0, 180, 255, .12),
-        inset 0 0 30px rgba(255,255,255,.03);
+        0 30px 90px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+    }
+
+    .logo-wrapper {
       text-align: center;
-    }
-
-    .logo {
-      width: 115px;
-      height: 115px;
-      object-fit: cover;
-      border-radius: 25px;
       margin-bottom: 18px;
-      box-shadow: 0 0 35px rgba(0, 200, 255, .25);
     }
 
-    .login-card h1 {
-      font-size: 30px;
-      margin-bottom: 8px;
+    .app-logo {
+      width: 92px;
+      height: 92px;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto 15px;
+      border-radius: 22px;
+      box-shadow: 0 0 35px rgba(20, 180, 255, 0.18);
     }
 
-    .login-card p {
-      color: #aebbd0;
-      margin-bottom: 25px;
+    .logo-fallback {
+      width: 92px;
+      height: 92px;
+      margin: 0 auto 15px;
+      border-radius: 22px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 38px;
+      font-weight: bold;
+      color: white;
+      background: linear-gradient(
+        135deg,
+        #11baf7,
+        #4264ff
+      );
+    }
+
+    .app-title {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+
+    .app-subtitle {
+      color: var(--muted);
+      margin-top: 10px;
+      line-height: 1.8;
+      font-size: 15px;
+    }
+
+    .form-group {
+      margin-top: 24px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 9px;
+      color: #dce8f7;
+      font-size: 14px;
     }
 
     .input {
       width: 100%;
-      padding: 15px;
-      margin-bottom: 12px;
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 14px;
-      outline: none;
-      background: rgba(255,255,255,.06);
+      height: 58px;
+      border-radius: 17px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: var(--input);
       color: white;
-      font-size: 16px;
+      outline: none;
+      padding: 0 18px;
+      transition: 0.2s;
     }
 
     .input:focus {
-      border-color: #38cfff;
-      box-shadow: 0 0 15px rgba(56,207,255,.15);
+      border-color: rgba(25, 189, 247, 0.75);
+      box-shadow:
+        0 0 0 4px rgba(25, 189, 247, 0.08);
     }
 
-    .primary-btn {
+    .input::placeholder {
+      color: #8b98ac;
+    }
+
+    .main-button {
       width: 100%;
-      border: 0;
-      padding: 15px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, #08bfff, #4264ff);
+      height: 58px;
+      margin-top: 17px;
+      border-radius: 17px;
       color: white;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: .2s;
+      font-weight: 800;
+      background:
+        linear-gradient(
+          100deg,
+          var(--blue),
+          var(--blue2)
+        );
+      box-shadow:
+        0 10px 30px rgba(39, 127, 255, 0.25);
+      transition: transform 0.15s, opacity 0.15s;
     }
 
-    .primary-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 30px rgba(20,160,255,.25);
+    .main-button:hover {
+      transform: translateY(-1px);
     }
 
-    .status {
+    .main-button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .message {
       margin-top: 15px;
-      min-height: 22px;
-      color: #8ddcff;
+      padding: 13px 15px;
+      border-radius: 14px;
+      line-height: 1.7;
       font-size: 14px;
+      display: none;
     }
 
-    /* ================= APP ================= */
+    .message.error {
+      display: block;
+      background: rgba(255, 70, 90, 0.1);
+      border: 1px solid rgba(255, 70, 90, 0.25);
+      color: #ffb6c0;
+    }
 
-    #appScreen {
-      height: 100vh;
-      display: flex;
+    .message.success {
+      display: block;
+      background: rgba(53, 213, 154, 0.1);
+      border: 1px solid rgba(53, 213, 154, 0.25);
+      color: #9ff2d0;
+    }
+
+    .message.info {
+      display: block;
+      background: rgba(25, 189, 247, 0.1);
+      border: 1px solid rgba(25, 189, 247, 0.2);
+      color: #a9eaff;
+    }
+
+    .back-button {
+      width: 100%;
+      height: 48px;
+      margin-top: 10px;
+      border-radius: 14px;
+      background: transparent;
+      color: #aebbd0;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    /* =========================
+       APP
+    ========================= */
+
+    #appPage {
+      min-height: 100vh;
+      display: none;
+    }
+
+    .app-layout {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 280px 1fr;
     }
 
     .sidebar {
-      width: 290px;
-      height: 100vh;
-      background: rgba(3, 10, 23, .72);
-      border-left: 1px solid rgba(255,255,255,.08);
+      border-left: 1px solid rgba(255,255,255,0.07);
+      background: rgba(3, 12, 28, 0.82);
       backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      padding: 18px;
     }
 
-    .sidebar-header {
+    .sidebar-logo {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 18px;
+      gap: 11px;
+      margin-bottom: 20px;
     }
 
-    .sidebar-header img {
-      width: 45px;
-      height: 45px;
-      border-radius: 13px;
+    .sidebar-logo img {
+      width: 43px;
+      height: 43px;
+      border-radius: 12px;
+      object-fit: contain;
     }
 
-    .sidebar-header strong {
+    .sidebar-logo span {
+      font-weight: 800;
       font-size: 18px;
     }
 
     .new-chat {
-      border: 1px solid rgba(70,210,255,.25);
-      background: rgba(20,150,255,.10);
+      width: 100%;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(
+        100deg,
+        var(--blue),
+        var(--blue2)
+      );
       color: white;
-      padding: 13px;
-      border-radius: 13px;
-      cursor: pointer;
-      margin-bottom: 15px;
-    }
-
-    .history {
-      flex: 1;
-      overflow-y: auto;
-    }
-
-    .history-item {
-      padding: 12px;
-      border-radius: 12px;
-      margin-bottom: 7px;
-      cursor: pointer;
-      color: #dce8f8;
-      background: transparent;
-      display: flex;
-      justify-content: space-between;
-      gap: 5px;
-    }
-
-    .history-item:hover,
-    .history-item.active {
-      background: rgba(255,255,255,.07);
+      font-weight: 800;
+      margin-bottom: 18px;
     }
 
     .history-title {
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
+      color: #7f8da4;
+      font-size: 12px;
+      margin: 5px 4px 10px;
+    }
+
+    .history {
+      overflow-y: auto;
       flex: 1;
     }
 
-    .delete-chat {
-      border: 0;
+    .history-item {
+      width: 100%;
+      text-align: right;
+      color: #dbe6f6;
       background: transparent;
-      color: #7890aa;
-      cursor: pointer;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .account-box {
-      border-top: 1px solid rgba(255,255,255,.08);
-      padding-top: 15px;
-      margin-top: 15px;
-    }
-
-    .account-phone {
-      font-size: 13px;
-      color: #9eb1c9;
-      margin-bottom: 10px;
-      direction: ltr;
-      text-align: center;
+    .history-item:hover {
+      background: rgba(255,255,255,0.06);
     }
 
     .logout {
-      width: 100%;
-      border: 1px solid rgba(255,255,255,.1);
-      background: rgba(255,255,255,.04);
-      color: white;
-      padding: 11px;
-      border-radius: 12px;
-      cursor: pointer;
+      margin-top: 15px;
+      height: 45px;
+      border-radius: 13px;
+      color: #ffb1bb;
+      background: rgba(255, 80, 100, 0.08);
+      border: 1px solid rgba(255, 80, 100, 0.13);
     }
 
-    /* ================= CHAT ================= */
-
     .chat-area {
-      flex: 1;
+      min-width: 0;
       display: flex;
       flex-direction: column;
-      min-width: 0;
+      min-height: 100vh;
     }
 
     .topbar {
@@ -239,14 +364,14 @@
       display: flex;
       align-items: center;
       padding: 0 25px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      background: rgba(0,0,0,.12);
-      backdrop-filter: blur(15px);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      background: rgba(4, 13, 30, 0.55);
+      backdrop-filter: blur(20px);
     }
 
     .topbar-title {
-      font-size: 20px;
-      font-weight: bold;
+      font-weight: 800;
+      font-size: 18px;
     }
 
     .messages {
@@ -255,51 +380,64 @@
       padding: 30px;
     }
 
-    .welcome {
+    .empty-chat {
+      min-height: 60vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       text-align: center;
-      margin-top: 13vh;
-      color: #aebbd0;
+      color: #8493a9;
     }
 
-    .welcome h2 {
+    .empty-chat h2 {
       color: white;
-      font-size: 30px;
       margin-bottom: 10px;
     }
 
-    .message {
-      max-width: 850px;
-      margin: 0 auto 18px;
+    .message-row {
+      max-width: 900px;
+      margin: 0 auto 20px;
       display: flex;
     }
 
-    .message.user {
+    .message-row.user {
       justify-content: flex-start;
     }
 
-    .message.assistant {
+    .message-row.ai {
       justify-content: flex-end;
     }
 
     .bubble {
-      max-width: 80%;
+      max-width: min(80%, 720px);
       padding: 15px 18px;
-      border-radius: 18px;
-      line-height: 1.7;
+      border-radius: 20px;
+      line-height: 1.85;
       white-space: pre-wrap;
+      word-break: break-word;
     }
 
     .user .bubble {
-      background: linear-gradient(135deg, #087fff, #3157ff);
+      background:
+        linear-gradient(
+          135deg,
+          rgba(24, 180, 245, 0.25),
+          rgba(64, 91, 255, 0.22)
+        );
+      border: 1px solid rgba(46, 175, 255, 0.2);
     }
 
-    .assistant .bubble {
-      background: rgba(255,255,255,.07);
-      border: 1px solid rgba(255,255,255,.08);
+    .ai .bubble {
+      background: rgba(255,255,255,0.055);
+      border: 1px solid rgba(255,255,255,0.08);
     }
 
     .composer {
       padding: 18px 25px 25px;
+      background: linear-gradient(
+        transparent,
+        rgba(2, 9, 20, 0.92)
+      );
     }
 
     .composer-inner {
@@ -307,62 +445,69 @@
       margin: auto;
       display: flex;
       gap: 10px;
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: 18px;
-      padding: 8px;
-      backdrop-filter: blur(20px);
     }
 
-    #messageInput {
+    .chat-input {
       flex: 1;
-      resize: none;
-      min-height: 48px;
-      max-height: 150px;
-      border: 0;
+      min-width: 0;
+      height: 55px;
+      border-radius: 17px;
+      background: rgba(25, 39, 63, 0.82);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: white;
+      padding: 0 18px;
       outline: none;
-      background: transparent;
-      color: white;
-      padding: 13px;
-      font-size: 16px;
     }
 
-    #sendButton {
-      width: 52px;
-      height: 52px;
-      border: 0;
-      border-radius: 15px;
-      background: linear-gradient(135deg, #00c9ff, #4357ff);
+    .send-button {
+      width: 58px;
+      height: 55px;
+      border-radius: 17px;
       color: white;
-      cursor: pointer;
-      font-size: 20px;
+      background: linear-gradient(
+        135deg,
+        var(--blue),
+        var(--blue2)
+      );
+      font-size: 21px;
+      font-weight: bold;
     }
 
-    @media (max-width: 750px) {
+    .status {
+      max-width: 900px;
+      margin: 7px auto 0;
+      color: #7e8da3;
+      font-size: 12px;
+      min-height: 18px;
+    }
+
+    @media (max-width: 800px) {
+      .app-layout {
+        grid-template-columns: 1fr;
+      }
+
       .sidebar {
-        width: 220px;
+        display: none;
       }
 
       .messages {
-        padding: 18px 12px;
+        padding: 18px;
+      }
+
+      .composer {
+        padding: 12px;
       }
 
       .bubble {
         max-width: 90%;
       }
-    }
 
-    @media (max-width: 600px) {
-      .sidebar {
-        display: none;
+      .login-card {
+        padding: 25px;
       }
 
-      .topbar {
-        padding: 0 15px;
-      }
-
-      .composer {
-        padding: 10px;
+      .app-title {
+        font-size: 29px;
       }
     }
   </style>
@@ -370,143 +515,243 @@
 
 <body>
 
-  <!-- ================= LOGIN ================= -->
+  <!-- =========================
+       LOGIN PAGE
+  ========================= -->
 
-  <section id="loginScreen">
+  <section id="loginPage">
 
     <div class="login-card">
 
-      <img src="/logo.png" class="logo" alt="Chat AI Pro">
+      <div class="logo-wrapper">
 
-      <h1>Chat AI Pro</h1>
-      <p>سجّل الدخول باستخدام رقم هاتفك</p>
-
-      <div id="phoneStep">
-
-        <input
-          id="phoneInput"
-          class="input"
-          type="tel"
-          placeholder="+9665XXXXXXXX"
-          autocomplete="tel"
+        <img
+          id="loginLogo"
+          class="app-logo"
+          src="/icon.png"
+          alt="Chat AI Pro"
+          onerror="handleLogoError(this)"
         >
+
+        <div
+          id="logoFallback"
+          class="logo-fallback"
+        >
+          AI
+        </div>
+
+        <div class="app-title">
+          Chat AI Pro
+        </div>
+
+        <div class="app-subtitle">
+          سجّل الدخول باستخدام رقم هاتفك
+        </div>
+
+      </div>
+
+      <!-- PHONE -->
+
+      <div id="phoneSection">
+
+        <div class="form-group">
+
+          <label for="phoneInput">
+            رقم الهاتف
+          </label>
+
+          <input
+            id="phoneInput"
+            class="input"
+            type="tel"
+            inputmode="tel"
+            autocomplete="tel"
+            placeholder="+9665XXXXXXXX"
+          >
+
+        </div>
 
         <button
           id="sendOtpButton"
-          class="primary-btn"
+          class="main-button"
+          type="button"
         >
           إرسال رمز التحقق
         </button>
 
       </div>
 
-      <div id="otpStep" class="hidden">
+      <!-- OTP -->
 
-        <input
-          id="otpInput"
-          class="input"
-          type="text"
-          inputmode="numeric"
-          maxlength="8"
-          placeholder="أدخل رمز التحقق"
-        >
+      <div id="otpSection" class="hidden">
+
+        <div class="form-group">
+
+          <label for="otpInput">
+            رمز التحقق
+          </label>
+
+          <input
+            id="otpInput"
+            class="input"
+            type="text"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            maxlength="10"
+            placeholder="أدخل الرمز الذي وصلك على WhatsApp"
+          >
+
+        </div>
 
         <button
           id="verifyOtpButton"
-          class="primary-btn"
+          class="main-button"
+          type="button"
         >
           تأكيد الرمز
         </button>
 
         <button
           id="backToPhoneButton"
-          class="logout"
-          style="margin-top:10px"
+          class="back-button"
+          type="button"
         >
           تغيير رقم الهاتف
         </button>
 
       </div>
 
-      <div id="loginStatus" class="status"></div>
+      <div
+        id="authMessage"
+        class="message"
+      ></div>
 
     </div>
 
   </section>
 
 
-  <!-- ================= APP ================= -->
+  <!-- =========================
+       APP PAGE
+  ========================= -->
 
-  <section id="appScreen" class="hidden">
+  <section id="appPage">
 
-    <aside class="sidebar">
+    <div class="app-layout">
 
-      <div class="sidebar-header">
-        <img src="/logo.png" alt="">
-        <strong>Chat AI Pro</strong>
-      </div>
+      <aside class="sidebar">
 
-      <button id="newChatButton" class="new-chat">
-        ＋ محادثة جديدة
-      </button>
+        <div class="sidebar-logo">
 
-      <div id="historyList" class="history"></div>
+          <img
+            src="/icon.png"
+            alt="Chat AI Pro"
+            onerror="handleLogoError(this)"
+          >
 
-      <div class="account-box">
+          <span>
+            Chat AI Pro
+          </span>
 
-        <div id="accountPhone" class="account-phone"></div>
+        </div>
 
-        <button id="logoutButton" class="logout">
+        <button
+          id="newChatButton"
+          class="new-chat"
+          type="button"
+        >
+          + محادثة جديدة
+        </button>
+
+        <div class="history-title">
+          المحادثات السابقة
+        </div>
+
+        <div
+          id="history"
+          class="history"
+        ></div>
+
+        <button
+          id="logoutButton"
+          class="logout"
+          type="button"
+        >
           تسجيل الخروج
         </button>
 
-      </div>
-
-    </aside>
+      </aside>
 
 
-    <main class="chat-area">
+      <main class="chat-area">
 
-      <header class="topbar">
-        <div id="chatTitle" class="topbar-title">
-          محادثة جديدة
-        </div>
-      </header>
+        <header class="topbar">
 
-      <div id="messages" class="messages">
+          <div class="topbar-title">
+            Chat AI Pro
+          </div>
 
-        <div class="welcome">
-          <h2>مرحبًا بك في Chat AI Pro 👋</h2>
-          <p>اكتب أي شيء تريد أن تسأل عنه.</p>
-        </div>
-
-      </div>
+        </header>
 
 
-      <div class="composer">
+        <div
+          id="messages"
+          class="messages"
+        >
 
-        <div class="composer-inner">
-
-          <textarea
-            id="messageInput"
-            placeholder="اكتب رسالتك..."
-            rows="1"
-          ></textarea>
-
-          <button id="sendButton">
-            ➤
-          </button>
+          <div
+            id="emptyChat"
+            class="empty-chat"
+          >
+            <div>
+              <h2>مرحبًا بك في Chat AI Pro</h2>
+              <p>
+                اكتب رسالتك لبدء المحادثة مع الذكاء الاصطناعي.
+              </p>
+            </div>
+          </div>
 
         </div>
 
-      </div>
 
-    </main>
+        <div class="composer">
+
+          <div class="composer-inner">
+
+            <input
+              id="chatInput"
+              class="chat-input"
+              type="text"
+              autocomplete="off"
+              placeholder="اكتب رسالتك..."
+            >
+
+            <button
+              id="sendChatButton"
+              class="send-button"
+              type="button"
+              aria-label="إرسال"
+            >
+              ➤
+            </button>
+
+          </div>
+
+          <div
+            id="chatStatus"
+            class="status"
+          ></div>
+
+        </div>
+
+      </main>
+
+    </div>
 
   </section>
 
 
-  <!-- Firebase -->
+  <!-- Firebase + Application -->
   <script type="module" src="/script.js"></script>
 
 </body>
