@@ -1,432 +1,1008 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#050505" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Chat AI Pro</title>
+    <title>Chat AI Pro</title>
 
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+    <!-- Chat AI Pro Icon -->
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
 
-    body {
-      margin: 0;
-      font-family: Arial, Tahoma, sans-serif;
-      background:
-        radial-gradient(circle at top right, #16213d 0%, transparent 40%),
-        radial-gradient(circle at bottom left, #111827 0%, transparent 40%),
-        #050505;
-      color: white;
-      min-height: 100vh;
-    }
+    <!-- Phone Number Library -->
+    <script src="https://cdn.jsdelivr.net/npm/libphonenumber-js@1.13.14/bundle/libphonenumber-js.min.js"></script>
 
-    button,
-    input,
-    select {
-      font: inherit;
-    }
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-    .hidden {
-      display: none !important;
-    }
+        body {
+            font-family:
+                Arial,
+                "Segoe UI",
+                Tahoma,
+                sans-serif;
 
-    /* =========================
-       AUTH
-    ========================= */
+            min-height: 100vh;
+            background:
+                radial-gradient(
+                    circle at 50% 0%,
+                    rgba(0, 119, 255, 0.25),
+                    transparent 35%
+                ),
+                linear-gradient(
+                    145deg,
+                    #020617,
+                    #03132e,
+                    #001d45,
+                    #020617
+                );
 
-    #authScreen {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
+            color: white;
+            overflow-x: hidden;
+        }
 
-    .auth-card {
-      width: 100%;
-      max-width: 430px;
-      padding: 30px;
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 28px;
-      background: rgba(20,20,25,.72);
-      backdrop-filter: blur(25px);
-      -webkit-backdrop-filter: blur(25px);
-      box-shadow: 0 20px 70px rgba(0,0,0,.45);
-    }
+        /* =========================
+           BACKGROUND EFFECTS
+        ========================= */
 
-    .logo {
-      width: 72px;
-      height: 72px;
-      margin: 0 auto 18px;
-      border-radius: 22px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      font-weight: 800;
-      background: linear-gradient(135deg,#ffffff,#7c7c7c);
-      color: #050505;
-      box-shadow: 0 10px 35px rgba(255,255,255,.12);
-    }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
 
-    .auth-card h1 {
-      text-align: center;
-      margin: 0;
-      font-size: 28px;
-    }
+            background:
+                radial-gradient(
+                    circle at 20% 20%,
+                    rgba(0, 140, 255, 0.12),
+                    transparent 25%
+                ),
+                radial-gradient(
+                    circle at 80% 80%,
+                    rgba(0, 70, 255, 0.12),
+                    transparent 30%
+                );
 
-    .auth-card p {
-      text-align: center;
-      color: #a9a9b3;
-      margin: 10px 0 25px;
-      line-height: 1.6;
-    }
+            pointer-events: none;
+            z-index: -1;
+        }
 
-    .phone-row {
-      display: flex;
-      gap: 8px;
-      direction: ltr;
-      margin-bottom: 12px;
-    }
+        /* =========================
+           AUTH SCREEN
+        ========================= */
 
-    #countrySelect {
-      width: 145px;
-      min-width: 145px;
-      padding: 14px 10px;
-      border-radius: 15px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.07);
-      color: white;
-      outline: none;
-      cursor: pointer;
-    }
+        #authScreen {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 25px;
+        }
 
-    #countrySelect option {
-      background: #17171b;
-      color: white;
-    }
+        .auth-card {
+            width: min(450px, 100%);
 
-    #phoneInput {
-      flex: 1;
-      min-width: 0;
-      padding: 14px;
-      border-radius: 15px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.07);
-      color: white;
-      outline: none;
-      direction: ltr;
-      text-align: left;
-    }
+            padding: 38px 30px;
 
-    #otpInput {
-      width: 100%;
-      padding: 16px;
-      border-radius: 15px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.07);
-      color: white;
-      outline: none;
-      text-align: center;
-      letter-spacing: 7px;
-      font-size: 22px;
-      margin-bottom: 12px;
-    }
+            border-radius: 32px;
 
-    input:focus,
-    select:focus {
-      border-color: rgba(255,255,255,.4);
-    }
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(255,255,255,0.11),
+                    rgba(255,255,255,0.035)
+                );
 
-    .primary-btn {
-      width: 100%;
-      border: 0;
-      border-radius: 15px;
-      padding: 15px;
-      cursor: pointer;
-      font-weight: 700;
-      color: #050505;
-      background: white;
-      transition: .2s;
-    }
+            border: 1px solid rgba(255,255,255,0.13);
 
-    .primary-btn:hover {
-      transform: translateY(-1px);
-      opacity: .92;
-    }
+            box-shadow:
+                0 30px 80px rgba(0,0,0,0.55),
+                inset 0 1px 0 rgba(255,255,255,0.1);
 
-    .secondary-btn {
-      width: 100%;
-      margin-top: 10px;
-      border: 1px solid rgba(255,255,255,.13);
-      border-radius: 15px;
-      padding: 13px;
-      cursor: pointer;
-      color: white;
-      background: rgba(255,255,255,.06);
-    }
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
 
-    .status {
-      min-height: 24px;
-      margin-top: 14px;
-      text-align: center;
-      color: #cfcfd8;
-      font-size: 14px;
-    }
+            text-align: center;
+        }
 
-    /* =========================
-       CHAT
-    ========================= */
+        /* =========================
+           APP ICON
+        ========================= */
 
-    #chatScreen {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+        .app-logo {
+            width: 135px;
+            height: 135px;
 
-    .chat-header {
-      height: 70px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 20px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      background: rgba(5,5,5,.72);
-      backdrop-filter: blur(20px);
-    }
+            margin: 0 auto 20px;
 
-    .chat-title {
-      font-weight: 800;
-      font-size: 19px;
-    }
+            border-radius: 30px;
 
-    .logout-btn {
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.06);
-      color: white;
-      border-radius: 12px;
-      padding: 9px 13px;
-      cursor: pointer;
-    }
+            overflow: hidden;
 
-    #messages {
-      flex: 1;
-      width: 100%;
-      max-width: 950px;
-      margin: auto;
-      padding: 25px 18px 130px;
-    }
+            box-shadow:
+                0 0 20px rgba(0, 119, 255, 0.55),
+                0 0 60px rgba(0, 119, 255, 0.25);
 
-    .message {
-      max-width: 80%;
-      padding: 13px 16px;
-      border-radius: 18px;
-      margin-bottom: 12px;
-      line-height: 1.7;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
+            border: 1px solid rgba(255,255,255,0.15);
 
-    .message.user {
-      margin-right: auto;
-      background: #ffffff;
-      color: #080808;
-      border-bottom-right-radius: 5px;
-    }
+            background: #020617;
+        }
 
-    .message.ai {
-      margin-left: auto;
-      background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.08);
-      border-bottom-left-radius: 5px;
-    }
+        .app-logo img {
+            width: 100%;
+            height: 100%;
 
-    .chat-input-area {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      padding: 15px;
-      background: rgba(5,5,5,.8);
-      backdrop-filter: blur(20px);
-      border-top: 1px solid rgba(255,255,255,.08);
-    }
+            object-fit: cover;
 
-    .chat-form {
-      max-width: 950px;
-      margin: auto;
-      display: flex;
-      gap: 10px;
-    }
+            display: block;
+        }
 
-    #messageInput {
-      flex: 1;
-      padding: 15px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.12);
-      outline: none;
-      background: rgba(255,255,255,.07);
-      color: white;
-    }
+        .app-title {
+            font-size: 34px;
+            font-weight: 800;
 
-    #sendMessageBtn {
-      width: 100px;
-      border: 0;
-      border-radius: 16px;
-      background: white;
-      color: black;
-      font-weight: 700;
-      cursor: pointer;
-    }
+            margin-bottom: 8px;
 
-    @media (max-width: 550px) {
-      .auth-card {
-        padding: 22px;
-      }
+            background:
+                linear-gradient(
+                    90deg,
+                    #ffffff,
+                    #bde8ff,
+                    #008cff
+                );
 
-      .phone-row {
-        flex-direction: column;
-      }
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
-      #countrySelect {
-        width: 100%;
-      }
+        .app-subtitle {
+            color: rgba(255,255,255,0.65);
+            font-size: 15px;
+            margin-bottom: 30px;
+        }
 
-      .message {
-        max-width: 92%;
-      }
+        /* =========================
+           PHONE INPUT
+        ========================= */
 
-      #sendMessageBtn {
-        width: 75px;
-      }
-    }
-  </style>
+        .phone-area {
+            display: flex;
+            gap: 10px;
+            direction: ltr;
+            margin-bottom: 15px;
+        }
+
+        #countrySelect {
+            width: 120px;
+            min-width: 120px;
+
+            padding: 14px 10px;
+
+            border-radius: 15px;
+
+            border: 1px solid rgba(255,255,255,0.12);
+
+            background:
+                rgba(255,255,255,0.07);
+
+            color: white;
+
+            outline: none;
+
+            font-size: 14px;
+
+            cursor: pointer;
+        }
+
+        #countrySelect option {
+            color: black;
+            background: white;
+        }
+
+        #phoneInput {
+            flex: 1;
+
+            padding: 15px;
+
+            border-radius: 15px;
+
+            border: 1px solid rgba(255,255,255,0.12);
+
+            background:
+                rgba(255,255,255,0.07);
+
+            color: white;
+
+            outline: none;
+
+            font-size: 16px;
+
+            direction: ltr;
+        }
+
+        #phoneInput::placeholder {
+            color: rgba(255,255,255,0.45);
+        }
+
+        #phoneInput:focus,
+        #countrySelect:focus {
+            border-color: rgba(0, 153, 255, 0.7);
+
+            box-shadow:
+                0 0 0 3px rgba(0, 140, 255, 0.12);
+        }
+
+        /* =========================
+           BUTTONS
+        ========================= */
+
+        button {
+            border: none;
+            outline: none;
+            cursor: pointer;
+
+            font-family: inherit;
+        }
+
+        .primary-btn {
+            width: 100%;
+
+            padding: 15px;
+
+            border-radius: 16px;
+
+            color: white;
+
+            font-size: 16px;
+            font-weight: 700;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #0077ff,
+                    #00c6ff
+                );
+
+            box-shadow:
+                0 10px 30px rgba(0,119,255,0.3);
+
+            transition:
+                transform 0.2s,
+                box-shadow 0.2s,
+                opacity 0.2s;
+        }
+
+        .primary-btn:hover {
+            transform: translateY(-2px);
+
+            box-shadow:
+                0 15px 35px rgba(0,119,255,0.45);
+        }
+
+        .primary-btn:active {
+            transform: scale(0.98);
+        }
+
+        .primary-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* =========================
+           OTP
+        ========================= */
+
+        #otpStep {
+            display: none;
+        }
+
+        .otp-title {
+            font-size: 21px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .otp-description {
+            color: rgba(255,255,255,0.65);
+            font-size: 14px;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+
+        #otpInput {
+            width: 100%;
+
+            padding: 16px;
+
+            border-radius: 16px;
+
+            border: 1px solid rgba(255,255,255,0.13);
+
+            background:
+                rgba(255,255,255,0.07);
+
+            color: white;
+
+            outline: none;
+
+            text-align: center;
+
+            font-size: 24px;
+            font-weight: 700;
+
+            letter-spacing: 8px;
+
+            margin-bottom: 15px;
+        }
+
+        #otpInput:focus {
+            border-color: rgba(0,153,255,0.8);
+
+            box-shadow:
+                0 0 0 3px rgba(0,140,255,0.12);
+        }
+
+        .secondary-btn {
+            width: 100%;
+
+            padding: 13px;
+
+            margin-top: 10px;
+
+            border-radius: 14px;
+
+            background:
+                rgba(255,255,255,0.07);
+
+            border:
+                1px solid rgba(255,255,255,0.1);
+
+            color: white;
+
+            font-size: 14px;
+
+            transition: 0.2s;
+        }
+
+        .secondary-btn:hover {
+            background:
+                rgba(255,255,255,0.12);
+        }
+
+        /* =========================
+           STATUS
+        ========================= */
+
+        #authStatus {
+            min-height: 22px;
+
+            margin-top: 15px;
+
+            font-size: 14px;
+
+            color: rgba(255,255,255,0.75);
+
+            line-height: 1.5;
+        }
+
+        /* =========================
+           CHAT SCREEN
+        ========================= */
+
+        #chatScreen {
+            display: none;
+
+            min-height: 100vh;
+
+            flex-direction: column;
+        }
+
+        .chat-header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+
+            height: 72px;
+
+            display: flex;
+            align-items: center;
+
+            padding: 0 22px;
+
+            background:
+                rgba(2, 8, 23, 0.72);
+
+            border-bottom:
+                1px solid rgba(255,255,255,0.08);
+
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-logo {
+            width: 43px;
+            height: 43px;
+
+            border-radius: 12px;
+
+            overflow: hidden;
+
+            box-shadow:
+                0 0 18px rgba(0,130,255,0.35);
+        }
+
+        .header-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .header-status {
+            font-size: 11px;
+            color: #65d9ff;
+            margin-top: 2px;
+        }
+
+        .logout-btn {
+            margin-right: auto;
+
+            padding: 9px 15px;
+
+            border-radius: 12px;
+
+            background:
+                rgba(255,255,255,0.06);
+
+            color: rgba(255,255,255,0.8);
+
+            border:
+                1px solid rgba(255,255,255,0.08);
+        }
+
+        .logout-btn:hover {
+            background:
+                rgba(255,255,255,0.1);
+        }
+
+        /* =========================
+           MESSAGES
+        ========================= */
+
+        #messages {
+            flex: 1;
+
+            width: min(1000px, 100%);
+
+            margin: auto;
+
+            padding:
+                30px 20px 130px;
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 82%;
+
+            padding: 14px 17px;
+
+            border-radius: 20px;
+
+            line-height: 1.7;
+
+            font-size: 15px;
+
+            white-space: pre-wrap;
+
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            align-self: flex-start;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #006cff,
+                    #00a9ff
+                );
+
+            border-bottom-right-radius: 6px;
+
+            box-shadow:
+                0 8px 25px rgba(0,110,255,0.2);
+        }
+
+        .message.ai {
+            align-self: flex-end;
+
+            background:
+                rgba(255,255,255,0.07);
+
+            border:
+                1px solid rgba(255,255,255,0.08);
+
+            border-bottom-left-radius: 6px;
+
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+        }
+
+        .welcome {
+            text-align: center;
+
+            margin: auto;
+
+            padding: 30px 20px;
+        }
+
+        .welcome-logo {
+            width: 100px;
+            height: 100px;
+
+            margin: 0 auto 20px;
+
+            border-radius: 25px;
+
+            overflow: hidden;
+
+            box-shadow:
+                0 0 35px rgba(0,140,255,0.35);
+        }
+
+        .welcome-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .welcome h2 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .welcome p {
+            color: rgba(255,255,255,0.55);
+        }
+
+        /* =========================
+           CHAT INPUT
+        ========================= */
+
+        .chat-input-area {
+            position: fixed;
+
+            left: 0;
+            right: 0;
+            bottom: 0;
+
+            padding: 18px;
+
+            background:
+                linear-gradient(
+                    to top,
+                    rgba(2,6,23,0.98),
+                    rgba(2,6,23,0.78),
+                    transparent
+                );
+
+            z-index: 30;
+        }
+
+        .chat-input-box {
+            width: min(900px, 100%);
+
+            margin: auto;
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 10px;
+
+            padding: 8px;
+
+            border-radius: 22px;
+
+            background:
+                rgba(255,255,255,0.075);
+
+            border:
+                1px solid rgba(255,255,255,0.12);
+
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+
+            box-shadow:
+                0 15px 50px rgba(0,0,0,0.45);
+        }
+
+        #messageInput {
+            flex: 1;
+
+            border: none;
+            outline: none;
+
+            resize: none;
+
+            min-height: 45px;
+            max-height: 150px;
+
+            padding:
+                12px 14px;
+
+            background: transparent;
+
+            color: white;
+
+            font-family: inherit;
+
+            font-size: 15px;
+
+            direction: rtl;
+        }
+
+        #messageInput::placeholder {
+            color:
+                rgba(255,255,255,0.42);
+        }
+
+        #sendMessageBtn {
+            width: 48px;
+            height: 48px;
+
+            flex-shrink: 0;
+
+            border-radius: 16px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #0077ff,
+                    #00c6ff
+                );
+
+            color: white;
+
+            font-size: 20px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            box-shadow:
+                0 7px 20px rgba(0,119,255,0.3);
+
+            transition: 0.2s;
+        }
+
+        #sendMessageBtn:hover {
+            transform: translateY(-2px);
+        }
+
+        #sendMessageBtn:disabled {
+            opacity: 0.5;
+            transform: none;
+        }
+
+        /* =========================
+           LOADING
+        ========================= */
+
+        .typing {
+            display: flex;
+            gap: 5px;
+
+            align-items: center;
+        }
+
+        .typing span {
+            width: 7px;
+            height: 7px;
+
+            border-radius: 50%;
+
+            background: #5ccaff;
+
+            animation:
+                typingAnimation 1.2s infinite;
+        }
+
+        .typing span:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .typing span:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        @keyframes typingAnimation {
+            0%, 60%, 100% {
+                opacity: 0.25;
+                transform: translateY(0);
+            }
+
+            30% {
+                opacity: 1;
+                transform: translateY(-4px);
+            }
+        }
+
+        /* =========================
+           RESPONSIVE
+        ========================= */
+
+        @media (max-width: 600px) {
+
+            .auth-card {
+                padding: 30px 20px;
+                border-radius: 26px;
+            }
+
+            .app-logo {
+                width: 115px;
+                height: 115px;
+                border-radius: 27px;
+            }
+
+            .app-title {
+                font-size: 28px;
+            }
+
+            .phone-area {
+                flex-direction: column;
+            }
+
+            #countrySelect {
+                width: 100%;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+
+            .chat-header {
+                padding: 0 14px;
+            }
+
+            .header-title {
+                font-size: 16px;
+            }
+
+            .logout-btn {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
-  <!-- =========================
-       LOGIN
-  ========================== -->
+    <!-- ==========================================
+         LOGIN / AUTH SCREEN
+    =========================================== -->
 
-  <section id="authScreen">
+    <section id="authScreen">
 
-    <div class="auth-card">
+        <div class="auth-card">
 
-      <div class="logo">AI</div>
+            <!-- REAL CHAT AI PRO ICON -->
+            <div class="app-logo">
+                <img
+                    src="icon.png"
+                    alt="Chat AI Pro"
+                >
+            </div>
 
-      <h1>Chat AI Pro</h1>
+            <h1 class="app-title">
+                Chat AI Pro
+            </h1>
 
-      <p id="authDescription">
-        أدخل رقم هاتفك للمتابعة
-      </p>
+            <p class="app-subtitle">
+                مساعدك الذكي في مكان واحد
+            </p>
 
-      <!-- Phone -->
-      <div id="phoneStep">
 
-        <div class="phone-row">
+            <!-- PHONE STEP -->
 
-          <select id="countrySelect" aria-label="الدولة">
-            <option value="SA">🇸🇦 +966</option>
-          </select>
+            <div id="phoneStep">
 
-          <input
-            id="phoneInput"
-            type="tel"
-            inputmode="tel"
-            autocomplete="tel"
-            placeholder="5XXXXXXXX"
-          />
+                <div class="phone-area">
+
+                    <select id="countrySelect">
+                        <option value="SA">🇸🇦 +966</option>
+                    </select>
+
+                    <input
+                        id="phoneInput"
+                        type="tel"
+                        inputmode="tel"
+                        autocomplete="tel"
+                        placeholder="رقم الهاتف"
+                    >
+
+                </div>
+
+                <button
+                    id="sendOtpBtn"
+                    class="primary-btn"
+                >
+                    إرسال رمز التحقق
+                </button>
+
+            </div>
+
+
+            <!-- OTP STEP -->
+
+            <div id="otpStep">
+
+                <div class="otp-title">
+                    تأكيد رقم الهاتف
+                </div>
+
+                <div class="otp-description">
+                    أدخل رمز التحقق الذي تم إرساله إلى رقم هاتفك عبر WhatsApp.
+                </div>
+
+                <input
+                    id="otpInput"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="one-time-code"
+                    maxlength="8"
+                    placeholder="••••••"
+                >
+
+                <button
+                    id="verifyOtpBtn"
+                    class="primary-btn"
+                >
+                    تأكيد الدخول
+                </button>
+
+                <button
+                    id="resendOtpBtn"
+                    class="secondary-btn"
+                >
+                    إعادة إرسال الرمز
+                </button>
+
+                <button
+                    id="backToPhoneBtn"
+                    class="secondary-btn"
+                >
+                    تغيير رقم الهاتف
+                </button>
+
+            </div>
+
+            <div id="authStatus"></div>
 
         </div>
 
-        <button id="sendOtpBtn" class="primary-btn">
-          إرسال رمز التحقق
-        </button>
-
-      </div>
-
-      <!-- OTP -->
-      <div id="otpStep" class="hidden">
-
-        <input
-          id="otpInput"
-          type="text"
-          inputmode="numeric"
-          autocomplete="one-time-code"
-          maxlength="8"
-          placeholder="••••••"
-        />
-
-        <button id="verifyOtpBtn" class="primary-btn">
-          تأكيد الرمز
-        </button>
-
-        <button id="resendOtpBtn" class="secondary-btn">
-          إرسال الرمز مرة أخرى
-        </button>
-
-      </div>
-
-      <div id="authStatus" class="status"></div>
-
-    </div>
-
-  </section>
+    </section>
 
 
-  <!-- =========================
-       CHAT
-  ========================== -->
+    <!-- ==========================================
+         CHAT SCREEN
+    =========================================== -->
 
-  <section id="chatScreen" class="hidden">
+    <section id="chatScreen">
 
-    <header class="chat-header">
+        <!-- HEADER -->
 
-      <div class="chat-title">
-        Chat AI Pro
-      </div>
+        <header class="chat-header">
 
-      <button id="logoutBtn" class="logout-btn">
-        تسجيل الخروج
-      </button>
+            <div class="header-brand">
 
-    </header>
+                <div class="header-logo">
+                    <img
+                        src="icon.png"
+                        alt="Chat AI Pro"
+                    >
+                </div>
 
-    <main id="messages"></main>
+                <div>
+                    <div class="header-title">
+                        Chat AI Pro
+                    </div>
 
-    <div class="chat-input-area">
+                    <div class="header-status">
+                        ● متصل
+                    </div>
+                </div>
 
-      <form id="chatForm" class="chat-form">
+            </div>
 
-        <input
-          id="messageInput"
-          type="text"
-          autocomplete="off"
-          placeholder="اكتب رسالتك..."
-        />
+            <button
+                id="logoutBtn"
+                class="logout-btn"
+            >
+                تسجيل الخروج
+            </button>
 
-        <button id="sendMessageBtn" type="submit">
-          إرسال
-        </button>
-
-      </form>
-
-    </div>
-
-  </section>
+        </header>
 
 
-  <!--
-    libphonenumber-js
-    يدعم بيانات أرقام دول ومناطق العالم.
-  -->
-  <script src="https://cdn.jsdelivr.net/npm/libphonenumber-js@1.13.14/bundle/libphonenumber-js.min.js"></script>
+        <!-- MESSAGES -->
 
-  <script src="script.js"></script>
+        <main id="messages">
+
+            <div class="welcome">
+
+                <div class="welcome-logo">
+                    <img
+                        src="icon.png"
+                        alt="Chat AI Pro"
+                    >
+                </div>
+
+                <h2>
+                    مرحبًا بك في Chat AI Pro
+                </h2>
+
+                <p>
+                    اكتب رسالتك وسأساعدك في الإجابة عنها.
+                </p>
+
+            </div>
+
+        </main>
+
+
+        <!-- CHAT INPUT -->
+
+        <div class="chat-input-area">
+
+            <div class="chat-input-box">
+
+                <textarea
+                    id="messageInput"
+                    rows="1"
+                    placeholder="اكتب رسالتك هنا..."
+                ></textarea>
+
+                <button
+                    id="sendMessageBtn"
+                    aria-label="إرسال"
+                >
+                    ➤
+                </button>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ==========================================
+         MAIN SCRIPT
+    =========================================== -->
+
+    <script src="script.js"></script>
 
 </body>
 </html>
