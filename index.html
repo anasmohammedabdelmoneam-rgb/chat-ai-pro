@@ -692,6 +692,130 @@
         font-size: 29px;
       }
     }
+/* =========================================
+   CHAT AI PRO - ANIMATED BACKGROUND
+========================================= */
+
+html,
+body {
+    background: #020b18 !important;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* طبقة الخلفية المتحركة */
+body::before {
+    content: "";
+    position: fixed;
+    inset: -25%;
+    z-index: -2;
+    pointer-events: none;
+
+    background:
+        radial-gradient(
+            circle at 20% 30%,
+            rgba(0, 190, 255, 0.20),
+            transparent 28%
+        ),
+        radial-gradient(
+            circle at 75% 25%,
+            rgba(65, 105, 255, 0.18),
+            transparent 30%
+        ),
+        radial-gradient(
+            circle at 45% 80%,
+            rgba(0, 130, 255, 0.16),
+            transparent 30%
+        ),
+        radial-gradient(
+            circle at 90% 85%,
+            rgba(100, 60, 255, 0.15),
+            transparent 28%
+        );
+
+    filter: blur(35px);
+
+    animation:
+        chatAIBackgroundMove
+        18s
+        ease-in-out
+        infinite
+        alternate;
+}
+
+/* طبقة توهج إضافية */
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(0, 20, 50, 0.35),
+            transparent 40%,
+            rgba(20, 0, 70, 0.25)
+        );
+
+    animation:
+        chatAIBackgroundPulse
+        10s
+        ease-in-out
+        infinite
+        alternate;
+}
+
+/* حركة الألوان */
+@keyframes chatAIBackgroundMove {
+
+    0% {
+        transform:
+            translate3d(-4%, -3%, 0)
+            scale(1);
+    }
+
+    25% {
+        transform:
+            translate3d(3%, -1%, 0)
+            scale(1.06);
+    }
+
+    50% {
+        transform:
+            translate3d(5%, 4%, 0)
+            scale(1.1);
+    }
+
+    75% {
+        transform:
+            translate3d(-2%, 5%, 0)
+            scale(1.05);
+    }
+
+    100% {
+        transform:
+            translate3d(-5%, -2%, 0)
+            scale(1);
+    }
+}
+
+/* نبض خفيف */
+@keyframes chatAIBackgroundPulse {
+
+    0% {
+        opacity: 0.55;
+    }
+
+    50% {
+        opacity: 0.85;
+    }
+
+    100% {
+        opacity: 0.60;
+    }
+}
 
   </style>
 
