@@ -1,3 +1,5 @@
+"use strict";
+
 require("dotenv").config();
 
 const express = require("express");
@@ -6,35 +8,35 @@ const path = require("path");
 
 const app = express();
 
+/* =========================================================
+   CONFIG
+========================================================= */
+
 const PORT = process.env.PORT || 10000;
 
-// ======================================================
-// API KEYS
-// ======================================================
+const GEMINI_API_KEY =
+  process.env.GEMINI_API_KEY;
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const AUTHENTICA_API_KEY = process.env.AUTHENTICA_API_KEY;
+const GROQ_API_KEY =
+  process.env.GROQ_API_KEY;
 
-// ======================================================
-// AUTHENTICA
-// ======================================================
+const OPENROUTER_API_KEY =
+  process.env.OPENROUTER_API_KEY;
 
-const AUTHENTICA_SEND_URL =
-  "https://api.authentica.sa/api/v2/send-otp";
+const AUTHENTICA_API_KEY =
+  process.env.AUTHENTICA_API_KEY;
 
-const AUTHENTICA_VERIFY_URL =
-  "https://api.authentica.sa/api/v2/verify-otp";
 
-const AUTHENTICA_BALANCE_URL =
-  "https://api.authentica.sa/api/v2/balance";
+/* =========================================================
+   MIDDLEWARE
+========================================================= */
 
-// ======================================================
-// MIDDLEWARE
-// ======================================================
-
-app.use(cors());
+app.use(
+  cors({
+    origin: true,
+    credentials: true
+  })
+);
 
 app.use(
   express.json({
@@ -44,156 +46,138 @@ app.use(
 
 app.use(
   express.urlencoded({
-    extended: true
+    extended: true,
+    limit: "2mb"
   })
 );
 
-// Serve frontend files
-app.use(express.static(path.join(__dirname)));
 
-// ======================================================
-// HELPERS
-// ======================================================
+/* =========================================================
+   STATIC FILES
+========================================================= */
 
-function normalizeSaudiPhone(phone) {
-  if (!phone) {
-    return null;
-  }
+app.use(
+  express.static(
+    path.join(__dirname)
+  )
+);
 
-  let value = String(phone).trim();
 
-  value = value.replace(/[\s\-()]/g, "");
-
-  // 05XXXXXXXX
-  if (/^05\d{8}$/.test(value)) {
-    return "+966" + value.substring(1);
-  }
-
-  // 5XXXXXXXX
-  if (/^5\d{8}$/.test(value)) {
-    return "+966" + value;
-  }
-
-  // 9665XXXXXXXX
-  if (/^9665\d{8}$/.test(value)) {
-    return "+" + value;
-  }
-
-  // +9665XXXXXXXX
-  if (/^\+9665\d{8}$/.test(value)) {
-    return value;
-  }
-
-  return null;
-}
-
-async function parseResponse(response) {
-  const text = await response.text();
-
-  if (!text) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    return {
-      raw: text
-    };
-  }
-}
-
-function getApiMessage(data, fallback) {
-  if (!data) {
-    return fallback;
-  }
-
-  return (
-    data.message ||
-    data.error ||
-    data.raw ||
-    fallback
-  );
-}
-
-// ======================================================
-// HOME
-// ======================================================
-
-app.get("/", (req, res) => {
-  res.sendFile(
-    path.join(__dirname, "index.html")
-  );
-});
-
-// ======================================================
-// HEALTH
-// ======================================================
+/* =========================================================
+   HEALTH
+========================================================= */
 
 app.get("/api/health", (req, res) => {
+
   res.json({
     ok: true,
+
     service: "Chat AI Pro",
 
     providers: {
-      gemini: !!GEMINI_API_KEY,
-      groq: !!GROQ_API_KEY,
-      openrouter: !!OPENROUTER_API_KEY,
-      authentica: !!AUTHENTICA_API_KEY
+      gemini: Boolean(GEMINI_API_KEY),
+      groq: Boolean(GROQ_API_KEY),
+      openrouter: Boolean(OPENROUTER_API_KEY),
+      authentica: Boolean(AUTHENTICA_API_KEY)
     },
 
     models: {
       gemini: "gemini-3.8-flash",
       groq: "openai/gpt-oss-20b",
       openrouter: "openrouter/free"
-    },
-
-    authenticaChannel: "whatsapp"
+    }
   });
+
 });
 
-// ======================================================
-// AUTHENTICA - SEND WHATSAPP OTP
-// ======================================================
+
+/* =========================================================
+   AUTHENTICA
+   SEND WHATSAPP OTP
+========================================================= */
 
 app.post(
   "/api/auth/send-otp",
   async (req, res) => {
-    try {
-      if (!AUTHENTICA_API_KEY) {
-        return res.status(500).json({
-          success: false,
-          message:
-            "AUTHENTICA_API_KEY غير موجود في إعدادات Render."
-        });
-      }
 
-      const phone =
-        normalizeSaudiPhone(
-          req.body.phone
-        );
+    try {
+
+      let { phone } = req.body;
+
+
+      /* -----------------------------------------
+         CHECK PHONE
+      ----------------------------------------- */
 
       if (!phone) {
+
         return res.status(400).json({
           success: false,
           message:
-            "رقم الجوال السعودي غير صحيح."
+            "رقم الهاتف مطلوب."
         });
+
       }
 
+
+      /* -----------------------------------------
+         CLEAN PHONE
+      ----------------------------------------- */
+
+      phone = String(phone)
+        .trim()
+        .replace(/[^\d+]/g, "");
+
+
+      /* -----------------------------------------
+         INTERNATIONAL FORMAT
+         Example:
+         +966501234567
+      ----------------------------------------- */
+
+      if (!phone.startsWith("+")) {
+
+        return res.status(400).json({
+          success: false,
+          message:
+            "رقم الهاتف يجب أن يكون بالصيغة الدولية، مثل +9665XXXXXXXX."
+        });
+
+      }
+
+
+      /* -----------------------------------------
+         CHECK API KEY
+      ----------------------------------------- */
+
+      if (!AUTHENTICA_API_KEY) {
+
+        console.error(
+          "AUTHENTICA_API_KEY is missing."
+        );
+
+        return res.status(500).json({
+          success: false,
+          message:
+            "مفتاح Authentica غير موجود في الخادم."
+        });
+
+      }
+
+
       console.log(
-        "Authentica: sending WhatsApp OTP to",
+        "Authentica: sending WhatsApp OTP to:",
         phone
       );
 
-      const payload = {
-        method: "whatsapp",
-        phone: phone
-      };
+
+      /* -----------------------------------------
+         SEND OTP
+      ----------------------------------------- */
 
       const response =
         await fetch(
-          AUTHENTICA_SEND_URL,
+          "https://api.authentica.sa/api/v2/send-otp",
           {
             method: "POST",
 
@@ -208,125 +192,218 @@ app.post(
                 "application/json"
             },
 
-            body:
-              JSON.stringify(payload)
+            body: JSON.stringify({
+              method: "whatsapp",
+              phone: phone
+            })
           }
         );
 
-      const data =
-        await parseResponse(response);
 
-      if (
-        !response.ok ||
-        data.success === false
-      ) {
+      const text =
+        await response.text();
+
+
+      let data;
+
+      try {
+
+        data = JSON.parse(text);
+
+      } catch {
+
+        data = {
+          success: false,
+          message: text
+        };
+
+      }
+
+
+      /* -----------------------------------------
+         AUTHENTICA ERROR
+      ----------------------------------------- */
+
+      if (!response.ok) {
+
         console.error(
-          "Authentica WHATSAPP OTP failed:",
+          "Authentica SEND OTP failed:",
           response.status,
-          JSON.stringify(data)
+          text
         );
 
+
         return res.status(
-          response.status || 500
+          response.status
         ).json({
+
           success: false,
 
           message:
-            getApiMessage(
-              data,
-              "تعذر إرسال رمز التحقق عبر WhatsApp."
-            )
+            data.message ||
+            "فشل إرسال رمز التحقق.",
+
+          authentica: data
+
         });
+
       }
 
+
+      /* -----------------------------------------
+         SUCCESS
+      ----------------------------------------- */
+
       console.log(
-        "Authentica: WhatsApp OTP sent successfully"
+        "Authentica SEND OTP success:",
+        data
       );
 
+
       return res.json({
+
         success: true,
 
         message:
+          data.message ||
           "تم إرسال رمز التحقق عبر WhatsApp."
+
       });
 
+
     } catch (error) {
+
       console.error(
-        "Authentica send OTP error:",
+        "SEND OTP ERROR:",
         error
       );
 
+
       return res.status(500).json({
+
         success: false,
 
         message:
-          "حدث خطأ أثناء الاتصال بخدمة Authentica."
+          "حدث خطأ في الخادم أثناء إرسال رمز التحقق."
+
       });
+
     }
+
   }
 );
 
-// ======================================================
-// AUTHENTICA - VERIFY OTP
-// ======================================================
+
+/* =========================================================
+   AUTHENTICA
+   VERIFY WHATSAPP OTP
+========================================================= */
 
 app.post(
   "/api/auth/verify-otp",
   async (req, res) => {
+
     try {
-      if (!AUTHENTICA_API_KEY) {
-        return res.status(500).json({
+
+      let {
+        phone,
+        otp
+      } = req.body;
+
+
+      /* -----------------------------------------
+         CHECK DATA
+      ----------------------------------------- */
+
+      if (!phone || !otp) {
+
+        return res.status(400).json({
+
           success: false,
 
           message:
-            "AUTHENTICA_API_KEY غير موجود في Render."
+            "رقم الهاتف ورمز التحقق مطلوبان."
+
         });
+
       }
 
-      const phone =
-        normalizeSaudiPhone(
-          req.body.phone
+
+      /* -----------------------------------------
+         CLEAN PHONE
+      ----------------------------------------- */
+
+      phone = String(phone)
+        .trim()
+        .replace(/[^\d+]/g, "");
+
+
+      /* -----------------------------------------
+         CLEAN OTP
+      ----------------------------------------- */
+
+      otp = String(otp)
+        .trim();
+
+
+      /* -----------------------------------------
+         INTERNATIONAL PHONE CHECK
+      ----------------------------------------- */
+
+      if (!phone.startsWith("+")) {
+
+        return res.status(400).json({
+
+          success: false,
+
+          message:
+            "رقم الهاتف يجب أن يكون بالصيغة الدولية."
+
+        });
+
+      }
+
+
+      /* -----------------------------------------
+         AUTHENTICA KEY
+      ----------------------------------------- */
+
+      if (!AUTHENTICA_API_KEY) {
+
+        console.error(
+          "AUTHENTICA_API_KEY is missing."
         );
 
-      const otp =
-        String(
-          req.body.otp || ""
-        ).trim();
+        return res.status(500).json({
 
-      if (!phone) {
-        return res.status(400).json({
           success: false,
 
           message:
-            "رقم الجوال غير صحيح."
+            "مفتاح Authentica غير موجود في الخادم."
+
         });
+
       }
 
-      if (!/^\d{4,8}$/.test(otp)) {
-        return res.status(400).json({
-          success: false,
-
-          message:
-            "رمز التحقق غير صحيح."
-        });
-      }
 
       console.log(
-        "Authentica: verifying WhatsApp OTP"
+        "Authentica: verifying WhatsApp OTP for:",
+        phone
       );
 
-      const payload = {
-        phone: phone,
-        otp: otp
-      };
+
+      /* -----------------------------------------
+         VERIFY OTP
+      ----------------------------------------- */
 
       const response =
         await fetch(
-          AUTHENTICA_VERIFY_URL,
+          "https://api.authentica.sa/api/v2/verify-otp",
           {
             method: "POST",
 
             headers: {
+
               "X-Authorization":
                 AUTHENTICA_API_KEY,
 
@@ -335,279 +412,525 @@ app.post(
 
               "Content-Type":
                 "application/json"
+
             },
 
-            body:
-              JSON.stringify(payload)
+            body: JSON.stringify({
+
+              phone: phone,
+
+              otp: otp
+
+            })
+
           }
         );
 
-      const data =
-        await parseResponse(response);
 
-      if (
-        !response.ok ||
-        data.success === false
-      ) {
+      const text =
+        await response.text();
+
+
+      let data;
+
+      try {
+
+        data =
+          JSON.parse(text);
+
+      } catch {
+
+        data = {
+
+          success: false,
+
+          message: text
+
+        };
+
+      }
+
+
+      /* -----------------------------------------
+         VERIFY ERROR
+      ----------------------------------------- */
+
+      if (!response.ok) {
+
         console.error(
-          "Authentica VERIFY failed:",
+          "Authentica VERIFY OTP failed:",
           response.status,
-          JSON.stringify(data)
+          text
         );
 
+
         return res.status(
-          response.status || 400
+          response.status
         ).json({
+
           success: false,
 
           message:
-            getApiMessage(
-              data,
-              "رمز التحقق غير صحيح أو انتهت صلاحيته."
-            )
+            data.message ||
+            "رمز التحقق غير صحيح.",
+
+          authentica:
+            data
+
         });
+
       }
 
+
+      /* -----------------------------------------
+         SUCCESS
+      ----------------------------------------- */
+
       console.log(
-        "Authentica: OTP verified successfully"
+        "Authentica VERIFY OTP success:",
+        data
       );
 
+
       return res.json({
+
         success: true,
 
         message:
-          "تم التحقق من رقم الجوال بنجاح."
+          data.message ||
+          "تم التحقق بنجاح."
+
       });
 
+
     } catch (error) {
+
       console.error(
-        "Authentica verify error:",
+        "VERIFY OTP ERROR:",
         error
       );
 
+
       return res.status(500).json({
+
         success: false,
 
         message:
-          "حدث خطأ أثناء التحقق من رمز OTP."
+          "حدث خطأ في الخادم أثناء التحقق."
+
       });
+
     }
+
   }
 );
 
-// ======================================================
-// AUTHENTICA - BALANCE
-// ======================================================
+
+/* =========================================================
+   AUTHENTICA BALANCE
+========================================================= */
 
 app.get(
   "/api/auth/balance",
   async (req, res) => {
+
     try {
+
       if (!AUTHENTICA_API_KEY) {
+
         return res.status(500).json({
+
           success: false,
 
           message:
             "AUTHENTICA_API_KEY غير موجود."
+
         });
+
       }
+
 
       const response =
         await fetch(
-          AUTHENTICA_BALANCE_URL,
+          "https://api.authentica.sa/api/v2/balance",
           {
             method: "GET",
 
             headers: {
+
               "X-Authorization":
                 AUTHENTICA_API_KEY,
 
               "Accept":
                 "application/json"
+
             }
+
           }
         );
 
-      const data =
-        await parseResponse(response);
 
-      return res
-        .status(response.status)
-        .json(data);
+      const text =
+        await response.text();
+
+
+      let data;
+
+      try {
+
+        data =
+          JSON.parse(text);
+
+      } catch {
+
+        data = {
+          success: false,
+          message: text
+        };
+
+      }
+
+
+      if (!response.ok) {
+
+        return res.status(
+          response.status
+        ).json(data);
+
+      }
+
+
+      return res.json(data);
+
 
     } catch (error) {
+
       console.error(
-        "Authentica balance error:",
+        "AUTHENTICA BALANCE ERROR:",
         error
       );
 
+
       return res.status(500).json({
+
         success: false,
 
         message:
-          "تعذر الاتصال بخدمة Authentica."
+          "فشل الحصول على رصيد Authentica."
+
       });
+
     }
+
   }
 );
 
-// ======================================================
-// GEMINI
-// ======================================================
 
-async function askGemini(message) {
+/* =========================================================
+   GEMINI
+========================================================= */
+
+async function askGemini(messages) {
+
   if (!GEMINI_API_KEY) {
+
     throw new Error(
-      "Gemini API key is not configured"
+      "Gemini API key is not configured."
     );
+
   }
+
+
+  /*
+    نحول تاريخ المحادثة إلى نص واحد
+    حتى تعمل المحادثة الحالية مع Interactions API.
+  */
+
+  const input =
+    messages
+      .map((message) => {
+
+        const role =
+          message.role === "assistant"
+            ? "Assistant"
+            : "User";
+
+        return `${role}: ${message.content}`;
+
+      })
+      .join("\n\n");
+
 
   const response =
     await fetch(
-      "https://generativelanguage.googleapis.com/v1/interactions",
+      "https://generativelanguage.googleapis.com/v1beta/interactions",
       {
+
         method: "POST",
 
         headers: {
+
           "Content-Type":
             "application/json",
 
           "x-goog-api-key":
             GEMINI_API_KEY
+
         },
 
-        body:
-          JSON.stringify({
-            model:
-              "gemini-3.8-flash",
+        body: JSON.stringify({
 
-            input:
-              message
-          })
+          model:
+            "gemini-3.8-flash",
+
+          input:
+            input
+
+        })
+
       }
     );
 
-  const data =
-    await parseResponse(response);
+
+  const text =
+    await response.text();
+
+
+  let data;
+
+  try {
+
+    data =
+      JSON.parse(text);
+
+  } catch {
+
+    data = {
+      error: text
+    };
+
+  }
+
 
   if (!response.ok) {
+
     throw new Error(
-      getApiMessage(
-        data,
-        `Gemini HTTP ${response.status}`
-      )
+      `Gemini ${response.status}: ${
+        data.error?.message ||
+        data.message ||
+        text
+      }`
     );
+
   }
 
-  const answer =
-    data.output_text ||
-    data.output?.text ||
-    data.text;
 
-  if (!answer) {
-    throw new Error(
-      "Gemini returned an empty response"
-    );
+  /*
+    Interactions API returns output_text
+    in the current API.
+  */
+
+  if (data.output_text) {
+
+    return data.output_text;
+
   }
 
-  return answer;
+
+  /*
+    Fallback parser in case the response
+    contains output items instead.
+  */
+
+  if (Array.isArray(data.outputs)) {
+
+    const textParts =
+      data.outputs
+        .map((item) => {
+
+          if (
+            item &&
+            typeof item.text === "string"
+          ) {
+
+            return item.text;
+
+          }
+
+          if (
+            item &&
+            Array.isArray(item.content)
+          ) {
+
+            return item.content
+              .map((part) =>
+                part.text || ""
+              )
+              .join("");
+
+          }
+
+          return "";
+
+        })
+        .filter(Boolean);
+
+
+    if (textParts.length) {
+
+      return textParts.join("\n");
+
+    }
+
+  }
+
+
+  throw new Error(
+    "Gemini returned no text."
+  );
+
 }
 
-// ======================================================
-// GROQ
-// ======================================================
 
-async function askGroq(message) {
+/* =========================================================
+   GROQ
+========================================================= */
+
+async function askGroq(messages) {
+
   if (!GROQ_API_KEY) {
+
     throw new Error(
-      "Groq API key is not configured"
+      "Groq API key is not configured."
     );
+
   }
+
 
   const response =
     await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
       {
+
         method: "POST",
 
         headers: {
+
           "Authorization":
             `Bearer ${GROQ_API_KEY}`,
 
           "Content-Type":
             "application/json"
+
         },
 
-        body:
-          JSON.stringify({
-            model:
-              "openai/gpt-oss-20b",
+        body: JSON.stringify({
 
-            messages: [
-              {
-                role: "system",
+          model:
+            "openai/gpt-oss-20b",
 
-                content:
-                  "You are Chat AI Pro, a helpful, accurate and friendly AI assistant."
-              },
+          messages:
+            messages.map((message) => ({
 
-              {
-                role: "user",
+              role:
+                message.role === "assistant"
+                  ? "assistant"
+                  : "user",
 
-                content:
-                  message
-              }
-            ],
+              content:
+                String(
+                  message.content || ""
+                )
 
-            temperature: 0.7,
+            })),
 
-            max_tokens: 2048
-          })
+          temperature:
+            0.7,
+
+          max_tokens:
+            4096
+
+        })
+
       }
     );
 
-  const data =
-    await parseResponse(response);
+
+  const text =
+    await response.text();
+
+
+  let data;
+
+  try {
+
+    data =
+      JSON.parse(text);
+
+  } catch {
+
+    data = {
+      error: text
+    };
+
+  }
+
 
   if (!response.ok) {
+
     throw new Error(
-      getApiMessage(
-        data,
-        `Groq HTTP ${response.status}`
-      )
+      `Groq ${response.status}: ${
+        data.error?.message ||
+        data.message ||
+        text
+      }`
     );
+
   }
+
 
   const answer =
     data.choices?.[0]?.message?.content;
 
+
   if (!answer) {
+
     throw new Error(
-      "Groq returned an empty response"
+      "Groq returned no text."
     );
+
   }
+
 
   return answer;
+
 }
 
-// ======================================================
-// OPENROUTER
-// ======================================================
 
-async function askOpenRouter(message) {
+/* =========================================================
+   OPENROUTER
+========================================================= */
+
+async function askOpenRouter(messages) {
+
   if (!OPENROUTER_API_KEY) {
+
     throw new Error(
-      "OpenRouter API key is not configured"
+      "OpenRouter API key is not configured."
     );
+
   }
+
 
   const response =
     await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
       {
+
         method: "POST",
 
         headers: {
+
           "Authorization":
             `Bearer ${OPENROUTER_API_KEY}`,
 
@@ -619,63 +942,202 @@ async function askOpenRouter(message) {
 
           "X-Title":
             "Chat AI Pro"
+
         },
 
-        body:
-          JSON.stringify({
-            model:
-              "openrouter/free",
+        body: JSON.stringify({
 
-            messages: [
-              {
-                role: "system",
+          model:
+            "openrouter/free",
 
-                content:
-                  "You are Chat AI Pro, a helpful, accurate and friendly AI assistant."
-              },
+          messages:
+            messages.map((message) => ({
 
-              {
-                role: "user",
+              role:
+                message.role === "assistant"
+                  ? "assistant"
+                  : "user",
 
-                content:
-                  message
-              }
-            ],
+              content:
+                String(
+                  message.content || ""
+                )
 
-            temperature: 0.7,
+            }))
 
-            max_tokens: 2048
-          })
+        })
+
       }
     );
 
-  const data =
-    await parseResponse(response);
+
+  const text =
+    await response.text();
+
+
+  let data;
+
+  try {
+
+    data =
+      JSON.parse(text);
+
+  } catch {
+
+    data = {
+      error: text
+    };
+
+  }
+
 
   if (!response.ok) {
+
     throw new Error(
-      getApiMessage(
-        data,
-        `OpenRouter HTTP ${response.status}`
-      )
+      `OpenRouter ${response.status}: ${
+        data.error?.message ||
+        data.message ||
+        text
+      }`
     );
+
   }
+
 
   const answer =
     data.choices?.[0]?.message?.content;
 
+
   if (!answer) {
+
     throw new Error(
-      "OpenRouter returned an empty response"
+      "OpenRouter returned no text."
     );
+
   }
 
+
   return answer;
+
 }
 
-// ======================================================
-// CHAT API
-// ======================================================
+
+/* =========================================================
+   NORMALIZE CHAT MESSAGES
+========================================================= */
+
+function normalizeMessages(body) {
+
+  let messages = [];
+
+
+  /*
+    New frontend:
+    {
+      messages: [...]
+    }
+  */
+
+  if (
+    Array.isArray(body.messages)
+  ) {
+
+    messages =
+      body.messages;
+
+  }
+
+
+  /*
+    Single message:
+    {
+      message: "Hello"
+    }
+  */
+
+  else if (
+    typeof body.message === "string"
+  ) {
+
+    messages = [
+
+      {
+        role: "user",
+
+        content:
+          body.message
+
+      }
+
+    ];
+
+  }
+
+
+  /*
+    Old frontend:
+    {
+      prompt: "Hello"
+    }
+  */
+
+  else if (
+    typeof body.prompt === "string"
+  ) {
+
+    messages = [
+
+      {
+        role: "user",
+
+        content:
+          body.prompt
+
+      }
+
+    ];
+
+  }
+
+
+  /*
+    Clean messages.
+  */
+
+  messages =
+    messages
+      .filter(
+        (message) =>
+          message &&
+          typeof message.content === "string"
+      )
+      .map((message) => ({
+
+        role:
+          message.role === "assistant"
+            ? "assistant"
+            : "user",
+
+        content:
+          message.content.trim()
+
+      }))
+      .filter(
+        (message) =>
+          message.content.length > 0
+      );
+
+
+  return messages;
+
+}
+
+
+/* =========================================================
+   CHAT API
+   FALLBACK:
+   GEMINI → GROQ → OPENROUTER
+========================================================= */
 
 app.post(
   "/api/chat",
@@ -683,229 +1145,193 @@ app.post(
 
     try {
 
-      console.log(
-        "CHAT REQUEST BODY:",
-        req.body
-      );
+      const messages =
+        normalizeMessages(req.body || {});
 
-      let message = "";
 
-      // --------------------------------------------------
-      // 1. message
-      // --------------------------------------------------
-
-      if (
-        req.body &&
-        typeof req.body.message ===
-          "string"
-      ) {
-        message =
-          req.body.message.trim();
-      }
-
-      // --------------------------------------------------
-      // 2. messages
-      // --------------------------------------------------
-
-      if (
-        !message &&
-        req.body &&
-        Array.isArray(
-          req.body.messages
-        )
-      ) {
-
-        const messages =
-          req.body.messages;
-
-        const lastUserMessage =
-          [...messages]
-            .reverse()
-            .find(
-              (item) =>
-                item &&
-                item.role === "user" &&
-                typeof item.content ===
-                  "string"
-            );
-
-        if (lastUserMessage) {
-          message =
-            lastUserMessage.content.trim();
-        }
-      }
-
-      // --------------------------------------------------
-      // 3. prompt
-      // --------------------------------------------------
-
-      if (
-        !message &&
-        req.body &&
-        typeof req.body.prompt ===
-          "string"
-      ) {
-        message =
-          req.body.prompt.trim();
-      }
-
-      console.log(
-        "CHAT MESSAGE:",
-        message
-      );
-
-      // --------------------------------------------------
-      // EMPTY MESSAGE
-      // --------------------------------------------------
-
-      if (!message) {
+      if (!messages.length) {
 
         return res.status(400).json({
+
           success: false,
 
           message:
             "اكتب رسالة أولًا."
+
         });
+
       }
 
-      // --------------------------------------------------
-      // PROVIDERS
-      // --------------------------------------------------
 
-      const providers = [];
+      /*
+        Keep a reasonable conversation size.
+        This prevents excessively large requests.
+      */
 
-      // Gemini
-      if (GEMINI_API_KEY) {
+      const limitedMessages =
+        messages.slice(-30);
 
-        providers.push({
+
+      const providers = [
+
+        {
           name: "Gemini",
 
-          function: async () => {
-            return await askGemini(
-              message
-            );
-          }
-        });
-      }
+          enabled:
+            Boolean(GEMINI_API_KEY),
 
-      // Groq
-      if (GROQ_API_KEY) {
+          fn:
+            () =>
+              askGemini(
+                limitedMessages
+              )
+        },
 
-        providers.push({
+
+        {
           name: "Groq",
 
-          function: async () => {
-            return await askGroq(
-              message
-            );
-          }
-        });
-      }
+          enabled:
+            Boolean(GROQ_API_KEY),
 
-      // OpenRouter
-      if (OPENROUTER_API_KEY) {
+          fn:
+            () =>
+              askGroq(
+                limitedMessages
+              )
+        },
 
-        providers.push({
+
+        {
           name: "OpenRouter",
 
-          function: async () => {
-            return await askOpenRouter(
-              message
-            );
-          }
-        });
-      }
+          enabled:
+            Boolean(OPENROUTER_API_KEY),
 
-      // --------------------------------------------------
-      // NO PROVIDERS
-      // --------------------------------------------------
+          fn:
+            () =>
+              askOpenRouter(
+                limitedMessages
+              )
+        }
 
-      if (providers.length === 0) {
+      ];
 
-        return res.status(500).json({
-          success: false,
 
-          message:
-            "لا توجد خدمة AI مفعّلة."
-        });
-      }
+      const errors = [];
 
-      // --------------------------------------------------
-      // AUTOMATIC FALLBACK
-      // --------------------------------------------------
+
+      /* -----------------------------------------
+         TRY PROVIDERS IN ORDER
+      ----------------------------------------- */
 
       for (
         const provider of providers
       ) {
 
+        if (!provider.enabled) {
+
+          continue;
+
+        }
+
+
         try {
 
           console.log(
-            `AI: trying ${provider.name}`
+            `Chat AI Pro: trying ${provider.name}`
           );
+
 
           const answer =
-            await provider.function();
+            await provider.fn();
+
 
           console.log(
-            `AI: ${provider.name} succeeded`
+            `Chat AI Pro: ${provider.name} succeeded`
           );
+
 
           return res.json({
 
             success: true,
 
-            provider:
-              provider.name,
+            reply: answer,
 
-            answer:
-              answer
+            provider:
+              provider.name
+
           });
+
 
         } catch (error) {
 
           console.error(
-            `AI: ${provider.name} failed:`,
+            `${provider.name} failed:`,
             error.message
           );
+
+
+          errors.push({
+
+            provider:
+              provider.name,
+
+            error:
+              error.message
+
+          });
+
         }
+
       }
 
-      // --------------------------------------------------
-      // ALL PROVIDERS FAILED
-      // --------------------------------------------------
+
+      /* -----------------------------------------
+         ALL PROVIDERS FAILED
+      ----------------------------------------- */
 
       return res.status(503).json({
 
         success: false,
 
         message:
-          "جميع خدمات الذكاء الاصطناعي غير متاحة حاليًا. حاول مرة أخرى."
+          "تعذر الحصول على رد من خدمات الذكاء الاصطناعي حاليًا.",
+
+        errors:
+          errors
+
       });
+
 
     } catch (error) {
 
       console.error(
-        "CHAT API ERROR:",
+        "CHAT ERROR:",
         error
       );
+
 
       return res.status(500).json({
 
         success: false,
 
         message:
-          "حدث خطأ داخلي أثناء معالجة الرسالة."
+          "حدث خطأ في الخادم."
+
       });
+
     }
+
   }
 );
 
-// ======================================================
-// FRONTEND FALLBACK
-// ======================================================
 
-// Express 5 syntax
+/* =========================================================
+   FRONTEND FALLBACK
+   Express 5 syntax
+========================================================= */
+
 app.get(
   "/{*splat}",
   (req, res) => {
@@ -916,47 +1342,17 @@ app.get(
         "index.html"
       )
     );
+
   }
 );
 
-// ======================================================
-// ERROR HANDLER
-// ======================================================
 
-app.use(
-  (
-    err,
-    req,
-    res,
-    next
-  ) => {
-
-    console.error(
-      "Server error:",
-      err
-    );
-
-    if (res.headersSent) {
-      return next(err);
-    }
-
-    res.status(500).json({
-
-      success: false,
-
-      message:
-        "حدث خطأ داخلي في الخادم."
-    });
-  }
-);
-
-// ======================================================
-// START
-// ======================================================
+/* =========================================================
+   START SERVER
+========================================================= */
 
 app.listen(
   PORT,
-  "0.0.0.0",
   () => {
 
     console.log(
@@ -967,7 +1363,7 @@ app.listen(
       `Gemini: ${
         GEMINI_API_KEY
           ? "configured"
-          : "not configured"
+          : "missing"
       }`
     );
 
@@ -975,7 +1371,7 @@ app.listen(
       `Groq: ${
         GROQ_API_KEY
           ? "configured"
-          : "not configured"
+          : "missing"
       }`
     );
 
@@ -983,7 +1379,7 @@ app.listen(
       `OpenRouter: ${
         OPENROUTER_API_KEY
           ? "configured"
-          : "not configured"
+          : "missing"
       }`
     );
 
@@ -991,12 +1387,10 @@ app.listen(
       `Authentica: ${
         AUTHENTICA_API_KEY
           ? "configured"
-          : "not configured"
+          : "missing"
       }`
+
     );
 
-    console.log(
-      "Authentica OTP channel: WhatsApp"
-    );
   }
 );
