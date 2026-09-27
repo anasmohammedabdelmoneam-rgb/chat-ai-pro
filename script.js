@@ -1,374 +1,224 @@
-"use strict";
+import { initializeApp } from
+  "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 
-/*
-  Chat AI Pro
-  International phone numbers + WhatsApp OTP + AI chat
-*/
+import {
+  getAuth,
+  signInWithCustomToken,
+  onAuthStateChanged,
+  signOut
+} from
+  "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
-const API_BASE = window.location.origin;
+import {
+  getFirestore,
+  collection,
+  doc,
+  addDoc,
+  setDoc,
+  getDocs,
+  deleteDoc,
+  query,
+  orderBy,
+  serverTimestamp
+} from
+  "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-let selectedCountry = "SA";
+
+// ======================================================
+// FIREBASE CONFIG
+// ======================================================
+//
+// ضع هنا Firebase Web App config الخاص بمشروعك.
+//
+// Firebase Console:
+// Project settings
+// → General
+// → Your apps
+// → Web app
+// → SDK setup and configuration
+//
+// لا تضع هنا FIREBASE_PRIVATE_KEY.
+// لا تضع هنا FIREBASE_CLIENT_EMAIL.
+// لا تضع هنا أي مفتاح Admin.
+// ======================================================
+
+const firebaseConfig = {
+  apiKey: "PUT_YOUR_FIREBASE_WEB_API_KEY_HERE",
+  authDomain: "PUT_YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "PUT_YOUR_PROJECT_ID_HERE",
+  storageBucket: "PUT_YOUR_STORAGE_BUCKET_HERE",
+  messagingSenderId: "PUT_YOUR_SENDER_ID_HERE",
+  appId: "PUT_YOUR_APP_ID_HERE"
+};
+
+
+// ======================================================
+// FIREBASE INITIALIZATION
+// ======================================================
+
+const firebaseApp =
+  initializeApp(firebaseConfig);
+
+const auth =
+  getAuth(firebaseApp);
+
+const db =
+  getFirestore(firebaseApp);
+
+
+// ======================================================
+// ELEMENTS
+// ======================================================
+
+const loginScreen =
+  document.getElementById("loginScreen");
+
+const appScreen =
+  document.getElementById("appScreen");
+
+const phoneStep =
+  document.getElementById("phoneStep");
+
+const otpStep =
+  document.getElementById("otpStep");
+
+const phoneInput =
+  document.getElementById("phoneInput");
+
+const otpInput =
+  document.getElementById("otpInput");
+
+const sendOtpButton =
+  document.getElementById("sendOtpButton");
+
+const verifyOtpButton =
+  document.getElementById("verifyOtpButton");
+
+const backToPhoneButton =
+  document.getElementById("backToPhoneButton");
+
+const loginStatus =
+  document.getElementById("loginStatus");
+
+const historyList =
+  document.getElementById("historyList");
+
+const newChatButton =
+  document.getElementById("newChatButton");
+
+const logoutButton =
+  document.getElementById("logoutButton");
+
+const accountPhone =
+  document.getElementById("accountPhone");
+
+const messagesContainer =
+  document.getElementById("messages");
+
+const messageInput =
+  document.getElementById("messageInput");
+
+const sendButton =
+  document.getElementById("sendButton");
+
+const chatTitle =
+  document.getElementById("chatTitle");
+
+
+// ======================================================
+// STATE
+// ======================================================
+
 let currentPhone = "";
-let conversation = [];
+let currentConversationId = null;
 
-const $ = (id) => document.getElementById(id);
-
-document.addEventListener("DOMContentLoaded", () => {
-  initializeCountries();
-  initializeAuth();
-  initializeChat();
-
-  window.ChatAIPro = {
-    API_BASE,
-    get selectedCountry() {
-      return selectedCountry;
-    },
-    get currentPhone() {
-      return currentPhone;
-    }
-  };
-});
+let currentMessages = [];
 
 
-/* =========================================================
-   COUNTRIES
-========================================================= */
+// ======================================================
+// HELPERS
+// ======================================================
 
-function initializeCountries() {
+function setLoginStatus(message, isError = false) {
+  loginStatus.textContent = message;
+  loginStatus.style.color =
+    isError ? "#ff8f9c" : "#8ddcff";
+}
 
-  const select = $("countrySelect");
+function cleanPhone(phone) {
+  return String(phone || "")
+    .trim()
+    .replace(/[^\d+]/g, "");
+}
 
-  if (!select) return;
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
-  /*
-    libphonenumber-js exposes all supported country codes.
-  */
-  if (
-    typeof libphonenumber === "undefined" ||
-    typeof libphonenumber.getCountries !== "function"
-  ) {
-    console.error("libphonenumber-js لم يتم تحميلها.");
-    return;
+function showLogin() {
+  loginScreen.classList.remove("hidden");
+  appScreen.classList.add("hidden");
+}
+
+function showApp() {
+  loginScreen.classList.add("hidden");
+  appScreen.classList.remove("hidden");
+}
+
+function setButtonLoading(button, loading, text) {
+  button.disabled = loading;
+
+  if (loading) {
+    button.dataset.oldText =
+      button.textContent;
+
+    button.textContent = text;
+  } else {
+    button.textContent =
+      button.dataset.oldText || button.textContent;
   }
+}
 
-  const countries = libphonenumber.getCountries();
 
-  const displayNames = new Intl.DisplayNames(
-    ["ar"],
-    {
-      type: "region"
-    }
-  );
+// ======================================================
+// SEND OTP
+// ======================================================
 
-  const countryList = countries
-    .map((countryCode) => {
+sendOtpButton.addEventListener(
+  "click",
+  async () => {
 
-      let name;
+    try {
 
-      try {
-        name = displayNames.of(countryCode);
-      } catch {
-        name = countryCode;
+      currentPhone =
+        cleanPhone(phoneInput.value);
+
+      if (!currentPhone) {
+        setLoginStatus(
+          "اكتب رقم الهاتف أولًا.",
+          true
+        );
+
+        return;
       }
 
-      if (!name || name === countryCode) {
-        name = countryCode;
-      }
-
-      let callingCode = "";
-
-      try {
-        callingCode =
-          libphonenumber.getCountryCallingCode(countryCode);
-      } catch {
-        return null;
-      }
-
-      return {
-        code: countryCode,
-        name,
-        callingCode,
-        flag: countryFlag(countryCode)
-      };
-
-    })
-    .filter(Boolean)
-    .sort((a, b) => {
-
-      /*
-        السعودية في البداية.
-      */
-      if (a.code === "SA") return -1;
-      if (b.code === "SA") return 1;
-
-      return a.name.localeCompare(
-        b.name,
-        "ar"
+      setButtonLoading(
+        sendOtpButton,
+        true,
+        "جاري الإرسال..."
       );
 
-    });
-
-
-  select.innerHTML = "";
-
-  for (const country of countryList) {
-
-    const option = document.createElement("option");
-
-    option.value = country.code;
-
-    option.textContent =
-      `${country.flag} ${country.name} (+${country.callingCode})`;
-
-    select.appendChild(option);
-  }
-
-  select.value = "SA";
-
-  selectedCountry = "SA";
-
-
-  select.addEventListener("change", () => {
-
-    selectedCountry = select.value;
-
-    updatePhonePlaceholder();
-
-    /*
-      عند تغيير الدولة، نمسح الرقم القديم
-      حتى لا يختلط رمز دولة مع رقم دولة أخرى.
-    */
-    const input = $("phoneInput");
-
-    if (input) {
-      input.value = "";
-      input.focus();
-    }
-
-  });
-
-  updatePhonePlaceholder();
-}
-
-
-/* =========================================================
-   FLAG
-========================================================= */
-
-function countryFlag(countryCode) {
-
-  if (!countryCode || countryCode.length !== 2) {
-    return "🌍";
-  }
-
-  return countryCode
-    .toUpperCase()
-    .split("")
-    .map(
-      char =>
-        String.fromCodePoint(
-          127397 + char.charCodeAt(0)
-        )
-    )
-    .join("");
-}
-
-
-/* =========================================================
-   PHONE PLACEHOLDER
-========================================================= */
-
-function updatePhonePlaceholder() {
-
-  const input = $("phoneInput");
-
-  if (!input) return;
-
-  if (selectedCountry === "SA") {
-    input.placeholder = "5XXXXXXXX";
-    return;
-  }
-
-  input.placeholder = "رقم الهاتف";
-}
-
-
-/* =========================================================
-   AUTH
-========================================================= */
-
-function initializeAuth() {
-
-  const sendOtpBtn = $("sendOtpBtn");
-  const verifyOtpBtn = $("verifyOtpBtn");
-  const resendOtpBtn = $("resendOtpBtn");
-
-  if (sendOtpBtn) {
-    sendOtpBtn.addEventListener(
-      "click",
-      sendOTP
-    );
-  }
-
-  if (verifyOtpBtn) {
-    verifyOtpBtn.addEventListener(
-      "click",
-      verifyOTP
-    );
-  }
-
-  if (resendOtpBtn) {
-    resendOtpBtn.addEventListener(
-      "click",
-      sendOTP
-    );
-  }
-
-
-  const savedPhone =
-    localStorage.getItem("chat_ai_phone");
-
-  const loggedIn =
-    localStorage.getItem("chat_ai_logged_in");
-
-
-  if (
-    savedPhone &&
-    loggedIn === "true"
-  ) {
-
-    currentPhone = savedPhone;
-
-    showChat();
-
-  } else {
-
-    showAuth();
-
-  }
-}
-
-
-/* =========================================================
-   CONVERT PHONE TO E.164
-========================================================= */
-
-function getInternationalPhone() {
-
-  const input = $("phoneInput");
-
-  if (!input) {
-    throw new Error("حقل رقم الهاتف غير موجود.");
-  }
-
-  let raw = input.value.trim();
-
-  if (!raw) {
-    throw new Error("اكتب رقم الهاتف أولًا.");
-  }
-
-
-  /*
-    إذا المستخدم كتب الرقم كاملًا مع +
-    نسمح للمكتبة بتحليله مباشرة.
-  */
-  let phoneNumber;
-
-  try {
-
-    if (raw.startsWith("+")) {
-
-      phoneNumber =
-        libphonenumber.parsePhoneNumber(
-          raw
-        );
-
-    } else {
-
-      phoneNumber =
-        libphonenumber.parsePhoneNumber(
-          raw,
-          selectedCountry
-        );
-
-    }
-
-  } catch (error) {
-
-    console.error(error);
-
-    throw new Error(
-      "رقم الهاتف غير صحيح."
-    );
-  }
-
-
-  if (!phoneNumber) {
-
-    throw new Error(
-      "تعذر قراءة رقم الهاتف."
-    );
-  }
-
-
-  /*
-    isPossible يعتمد على قواعد طول الرقم.
-  */
-  if (!phoneNumber.isPossible()) {
-
-    throw new Error(
-      "طول رقم الهاتف غير صحيح."
-    );
-  }
-
-
-  /*
-    نستخدم E.164:
-    مثال:
-    +9665XXXXXXXX
-  */
-  return phoneNumber.number;
-}
-
-
-/* =========================================================
-   SEND OTP
-========================================================= */
-
-async function sendOTP() {
-
-  const status = $("authStatus");
-  const sendButton = $("sendOtpBtn");
-  const resendButton = $("resendOtpBtn");
-
-  try {
-
-    const phone =
-      getInternationalPhone();
-
-    currentPhone = phone;
-
-
-    if (sendButton) {
-      sendButton.disabled = true;
-      sendButton.textContent = "جاري الإرسال...";
-    }
-
-    if (resendButton) {
-      resendButton.disabled = true;
-      resendButton.textContent = "جاري الإرسال...";
-    }
-
-
-    setStatus(
-      "جاري إرسال رمز التحقق عبر WhatsApp..."
-    );
-
-
-    const response =
-      await fetch(
-        `${API_BASE}/api/auth/send-otp`,
-        {
+      setLoginStatus(
+        "جاري إرسال رمز التحقق عبر WhatsApp..."
+      );
+
+      const response =
+        await fetch("/api/auth/send-otp", {
           method: "POST",
 
           headers: {
@@ -376,124 +226,85 @@ async function sendOTP() {
           },
 
           body: JSON.stringify({
-            phone
+            phone: currentPhone
           })
-        }
-      );
+        });
 
+      const data =
+        await response.json();
 
-    const data =
-      await response.json()
-        .catch(() => ({}));
+      if (!response.ok || !data.ok) {
+        throw new Error(
+          data.error ||
+          data.message ||
+          "تعذر إرسال رمز التحقق"
+        );
+      }
 
-
-    if (!response.ok) {
-
-      throw new Error(
-        data.message ||
-        "فشل إرسال رمز التحقق."
-      );
-
-    }
-
-
-    setStatus(
-      data.message ||
-      "تم إرسال رمز التحقق."
-    );
-
-
-    const phoneStep = $("phoneStep");
-    const otpStep = $("otpStep");
-
-    if (phoneStep) {
       phoneStep.classList.add("hidden");
-    }
-
-    if (otpStep) {
       otpStep.classList.remove("hidden");
-    }
 
+      setLoginStatus(
+        "تم إرسال رمز التحقق. أدخله هنا."
+      );
 
-    const otpInput = $("otpInput");
-
-    if (otpInput) {
       otpInput.focus();
+
+    } catch (error) {
+
+      console.error(error);
+
+      setLoginStatus(
+        error.message ||
+        "حدث خطأ أثناء إرسال الرمز.",
+        true
+      );
+
+    } finally {
+
+      setButtonLoading(
+        sendOtpButton,
+        false
+      );
     }
-
-  } catch (error) {
-
-    console.error(
-      "SEND OTP ERROR:",
-      error
-    );
-
-    setStatus(
-      error.message ||
-      "حدث خطأ أثناء إرسال الرمز."
-    );
-
-  } finally {
-
-    if (sendButton) {
-      sendButton.disabled = false;
-      sendButton.textContent =
-        "إرسال رمز التحقق";
-    }
-
-    if (resendButton) {
-      resendButton.disabled = false;
-      resendButton.textContent =
-        "إرسال الرمز مرة أخرى";
-    }
-
   }
-}
+);
 
 
-/* =========================================================
-   VERIFY OTP
-========================================================= */
+// ======================================================
+// VERIFY OTP
+// ======================================================
 
-async function verifyOTP() {
+verifyOtpButton.addEventListener(
+  "click",
+  async () => {
 
-  const otpInput = $("otpInput");
-  const verifyButton = $("verifyOtpBtn");
+    try {
 
-  if (!otpInput) return;
+      const otp =
+        String(otpInput.value || "").trim();
 
-  const otp =
-    otpInput.value.trim();
+      if (!otp) {
+        setLoginStatus(
+          "اكتب رمز التحقق.",
+          true
+        );
 
+        return;
+      }
 
-  if (!otp) {
+      setButtonLoading(
+        verifyOtpButton,
+        true,
+        "جاري التحقق..."
+      );
 
-    setStatus(
-      "اكتب رمز التحقق أولًا."
-    );
+      setLoginStatus(
+        "جاري التحقق من الرمز..."
+      );
 
-    return;
-  }
-
-
-  try {
-
-    if (verifyButton) {
-      verifyButton.disabled = true;
-      verifyButton.textContent =
-        "جاري التحقق...";
-    }
-
-
-    setStatus(
-      "جاري التحقق من الرمز..."
-    );
-
-
-    const response =
-      await fetch(
-        `${API_BASE}/api/auth/verify-otp`,
-        {
+      const response =
+        await fetch("/api/auth/verify-otp", {
           method: "POST",
 
           headers: {
@@ -502,417 +313,791 @@ async function verifyOTP() {
 
           body: JSON.stringify({
             phone: currentPhone,
-            otp
+            otp: otp
           })
-        }
+        });
+
+      const data =
+        await response.json();
+
+      if (!response.ok || !data.ok) {
+        throw new Error(
+          data.error ||
+          "رمز التحقق غير صحيح."
+        );
+      }
+
+      if (!data.token) {
+        throw new Error(
+          "لم يستلم التطبيق Firebase Custom Token."
+        );
+      }
+
+      // Firebase official custom-token flow
+      await signInWithCustomToken(
+        auth,
+        data.token
       );
 
-
-    const data =
-      await response.json()
-        .catch(() => ({}));
-
-
-    if (!response.ok) {
-
-      throw new Error(
-        data.message ||
-        "رمز التحقق غير صحيح."
+      setLoginStatus(
+        "تم تسجيل الدخول بنجاح."
       );
 
+    } catch (error) {
+
+      console.error(
+        "OTP verification error:",
+        error
+      );
+
+      setLoginStatus(
+        error.message ||
+        "حدث خطأ أثناء تسجيل الدخول.",
+        true
+      );
+
+    } finally {
+
+      setButtonLoading(
+        verifyOtpButton,
+        false
+      );
+    }
+  }
+);
+
+
+// ======================================================
+// BACK TO PHONE
+// ======================================================
+
+backToPhoneButton.addEventListener(
+  "click",
+  () => {
+
+    otpStep.classList.add("hidden");
+    phoneStep.classList.remove("hidden");
+
+    otpInput.value = "";
+
+    setLoginStatus("");
+
+  }
+);
+
+
+// ======================================================
+// AUTH STATE
+// ======================================================
+
+onAuthStateChanged(
+  auth,
+  async (user) => {
+
+    if (!user) {
+
+      showLogin();
+
+      return;
     }
 
+    showApp();
 
-    /*
-      حفظ تسجيل الدخول.
-    */
-    localStorage.setItem(
-      "chat_ai_logged_in",
-      "true"
+    accountPhone.textContent =
+      currentPhone ||
+      user.phoneNumber ||
+      "حسابك";
+
+    await loadConversations();
+
+    if (!currentConversationId) {
+      createNewChat();
+    }
+  }
+);
+
+
+// ======================================================
+// FIRESTORE PATH
+// ======================================================
+
+function conversationsCollection() {
+
+  if (!auth.currentUser) {
+    throw new Error(
+      "User is not authenticated."
     );
+  }
 
-    localStorage.setItem(
-      "chat_ai_phone",
-      currentPhone
+  return collection(
+    db,
+    "users",
+    auth.currentUser.uid,
+    "conversations"
+  );
+}
+
+
+// ======================================================
+// LOAD CONVERSATIONS
+// ======================================================
+
+async function loadConversations() {
+
+  try {
+
+    if (!auth.currentUser) {
+      return;
+    }
+
+    historyList.innerHTML = "";
+
+    const conversationsRef =
+      conversationsCollection();
+
+    const q =
+      query(
+        conversationsRef,
+        orderBy("updatedAt", "desc")
+      );
+
+    const snapshot =
+      await getDocs(q);
+
+    if (snapshot.empty) {
+
+      historyList.innerHTML = `
+        <div style="
+          color:#7f91aa;
+          text-align:center;
+          padding:20px;
+          font-size:13px;
+        ">
+          لا توجد محادثات بعد
+        </div>
+      `;
+
+      return;
+    }
+
+    snapshot.forEach(
+      (conversationDoc) => {
+
+        const data =
+          conversationDoc.data();
+
+        const item =
+          document.createElement("div");
+
+        item.className =
+          "history-item";
+
+        item.dataset.id =
+          conversationDoc.id;
+
+        item.innerHTML = `
+          <span class="history-title">
+            ${escapeHtml(
+              data.title ||
+              "محادثة جديدة"
+            )}
+          </span>
+
+          <button
+            class="delete-chat"
+            title="حذف"
+          >
+            ×
+          </button>
+        `;
+
+        item.addEventListener(
+          "click",
+          async (event) => {
+
+            if (
+              event.target.classList.contains(
+                "delete-chat"
+              )
+            ) {
+              return;
+            }
+
+            await openConversation(
+              conversationDoc.id
+            );
+          }
+        );
+
+        item
+          .querySelector(".delete-chat")
+          .addEventListener(
+            "click",
+            async (event) => {
+
+              event.stopPropagation();
+
+              await deleteConversation(
+                conversationDoc.id
+              );
+            }
+          );
+
+        historyList.appendChild(item);
+      }
     );
-
-
-    setStatus(
-      "تم تسجيل الدخول بنجاح."
-    );
-
-
-    showChat();
 
   } catch (error) {
 
     console.error(
-      "VERIFY OTP ERROR:",
+      "Load conversations error:",
       error
     );
 
-    setStatus(
-      error.message ||
-      "فشل التحقق."
+    historyList.innerHTML = `
+      <div style="
+        color:#ff8f9c;
+        padding:15px;
+        font-size:13px;
+      ">
+        تعذر تحميل المحادثات
+      </div>
+    `;
+  }
+}
+
+
+// ======================================================
+// CREATE NEW CHAT
+// ======================================================
+
+function createNewChat() {
+
+  currentConversationId = null;
+
+  currentMessages = [];
+
+  chatTitle.textContent =
+    "محادثة جديدة";
+
+  messagesContainer.innerHTML = `
+    <div class="welcome">
+      <h2>مرحبًا بك في Chat AI Pro 👋</h2>
+      <p>اكتب أي شيء تريد أن تسأل عنه.</p>
+    </div>
+  `;
+
+  document
+    .querySelectorAll(".history-item")
+    .forEach(
+      (item) =>
+        item.classList.remove("active")
     );
-
-  } finally {
-
-    if (verifyButton) {
-      verifyButton.disabled = false;
-      verifyButton.textContent =
-        "تأكيد الرمز";
-    }
-
-  }
 }
 
 
-/* =========================================================
-   STATUS
-========================================================= */
+// ======================================================
+// SAVE NEW CONVERSATION
+// ======================================================
 
-function setStatus(message) {
+async function saveConversation() {
 
-  const status =
-    $("authStatus");
-
-  if (status) {
-    status.textContent = message;
-  }
-}
-
-
-/* =========================================================
-   SHOW AUTH
-========================================================= */
-
-function showAuth() {
-
-  const authScreen =
-    $("authScreen");
-
-  const chatScreen =
-    $("chatScreen");
-
-  if (authScreen) {
-    authScreen.classList.remove("hidden");
-  }
-
-  if (chatScreen) {
-    chatScreen.classList.add("hidden");
-  }
-}
-
-
-/* =========================================================
-   SHOW CHAT
-========================================================= */
-
-function showChat() {
-
-  const authScreen =
-    $("authScreen");
-
-  const chatScreen =
-    $("chatScreen");
-
-  if (authScreen) {
-    authScreen.classList.add("hidden");
-  }
-
-  if (chatScreen) {
-    chatScreen.classList.remove("hidden");
-  }
-
-
-  const messageInput =
-    $("messageInput");
-
-  if (messageInput) {
-    setTimeout(
-      () => messageInput.focus(),
-      100
+  if (!auth.currentUser) {
+    throw new Error(
+      "يجب تسجيل الدخول أولًا."
     );
   }
-}
 
+  if (currentMessages.length === 0) {
+    return;
+  }
 
-/* =========================================================
-   CHAT
-========================================================= */
+  const firstUserMessage =
+    currentMessages.find(
+      (message) =>
+        message.role === "user"
+    );
 
-function initializeChat() {
+  const title =
+    firstUserMessage
+      ? firstUserMessage.content
+          .substring(0, 45)
+      : "محادثة جديدة";
 
-  const form =
-    $("chatForm");
+  const conversationData = {
+    title: title,
+    messages: currentMessages,
+    updatedAt: serverTimestamp(),
+    createdAt: serverTimestamp()
+  };
 
-  if (form) {
+  if (!currentConversationId) {
 
-    form.addEventListener(
-      "submit",
-      async (event) => {
+    const newDoc =
+      await addDoc(
+        conversationsCollection(),
+        conversationData
+      );
 
-        event.preventDefault();
+    currentConversationId =
+      newDoc.id;
 
-        await sendMessage();
+  } else {
 
+    await setDoc(
+      doc(
+        conversationsCollection(),
+        currentConversationId
+      ),
+      {
+        title: title,
+        messages: currentMessages,
+        updatedAt: serverTimestamp()
+      },
+      {
+        merge: true
       }
     );
-
   }
 
+  chatTitle.textContent =
+    title;
 
-  const logoutBtn =
-    $("logoutBtn");
-
-  if (logoutBtn) {
-
-    logoutBtn.addEventListener(
-      "click",
-      logout
-    );
-
-  }
+  await loadConversations();
 }
 
 
-/* =========================================================
-   SEND MESSAGE
-========================================================= */
+// ======================================================
+// OPEN CONVERSATION
+// ======================================================
 
-async function sendMessage() {
-
-  const input =
-    $("messageInput");
-
-  const sendButton =
-    $("sendMessageBtn");
-
-  if (!input) return;
-
-
-  const message =
-    input.value.trim();
-
-
-  if (!message) {
-
-    return;
-
-  }
-
-
-  addMessage(
-    message,
-    "user"
-  );
-
-
-  input.value = "";
-
-  input.focus();
-
-
-  conversation.push({
-    role: "user",
-    content: message
-  });
-
-
-  if (sendButton) {
-    sendButton.disabled = true;
-    sendButton.textContent = "...";
-  }
-
-
-  const loading =
-    addMessage(
-      "جاري التفكير...",
-      "ai"
-    );
-
+async function openConversation(
+  conversationId
+) {
 
   try {
 
-    const response =
-      await fetch(
-        `${API_BASE}/api/chat`,
-        {
-          method: "POST",
+    const conversationRef =
+      doc(
+        conversationsCollection(),
+        conversationId
+      );
 
-          headers: {
-            "Content-Type": "application/json"
-          },
+    const snapshot =
+      await getDocs(
+        query(
+          conversationsCollection()
+        )
+      );
 
-          body: JSON.stringify({
-            messages: conversation
-          })
+    let found = null;
+
+    snapshot.forEach(
+      (item) => {
+
+        if (item.id === conversationId) {
+          found = item;
+        }
+      }
+    );
+
+    if (!found) {
+      throw new Error(
+        "المحادثة غير موجودة."
+      );
+    }
+
+    const data =
+      found.data();
+
+    currentConversationId =
+      conversationId;
+
+    currentMessages =
+      Array.isArray(data.messages)
+        ? data.messages
+        : [];
+
+    chatTitle.textContent =
+      data.title ||
+      "محادثة جديدة";
+
+    renderMessages();
+
+    document
+      .querySelectorAll(".history-item")
+      .forEach(
+        (item) => {
+
+          item.classList.toggle(
+            "active",
+            item.dataset.id ===
+              conversationId
+          );
         }
       );
 
+  } catch (error) {
 
-    const data =
-      await response.json()
-        .catch(() => ({}));
+    console.error(
+      "Open conversation error:",
+      error
+    );
+  }
+}
 
 
-    if (!response.ok) {
+// ======================================================
+// DELETE CONVERSATION
+// ======================================================
 
-      throw new Error(
-        data.message ||
-        data.error ||
-        "فشل الاتصال بخدمة الذكاء الاصطناعي."
+async function deleteConversation(
+  conversationId
+) {
+
+  try {
+
+    await deleteDoc(
+      doc(
+        conversationsCollection(),
+        conversationId
+      )
+    );
+
+    if (
+      currentConversationId ===
+      conversationId
+    ) {
+      createNewChat();
+    }
+
+    await loadConversations();
+
+  } catch (error) {
+
+    console.error(
+      "Delete conversation error:",
+      error
+    );
+  }
+}
+
+
+// ======================================================
+// RENDER MESSAGES
+// ======================================================
+
+function renderMessages() {
+
+  messagesContainer.innerHTML = "";
+
+  if (currentMessages.length === 0) {
+
+    messagesContainer.innerHTML = `
+      <div class="welcome">
+        <h2>محادثة جديدة</h2>
+        <p>اكتب أي شيء تريد أن تسأل عنه.</p>
+      </div>
+    `;
+
+    return;
+  }
+
+  currentMessages.forEach(
+    (message) => {
+
+      const wrapper =
+        document.createElement("div");
+
+      wrapper.className =
+        `message ${
+          message.role === "user"
+            ? "user"
+            : "assistant"
+        }`;
+
+      const bubble =
+        document.createElement("div");
+
+      bubble.className =
+        "bubble";
+
+      bubble.textContent =
+        message.content;
+
+      wrapper.appendChild(bubble);
+
+      messagesContainer.appendChild(
+        wrapper
+      );
+    }
+  );
+
+  messagesContainer.scrollTop =
+    messagesContainer.scrollHeight;
+}
+
+
+// ======================================================
+// ADD MESSAGE TO UI
+// ======================================================
+
+function addMessageToUI(
+  role,
+  content
+) {
+
+  const welcome =
+    messagesContainer.querySelector(
+      ".welcome"
+    );
+
+  if (welcome) {
+    welcome.remove();
+  }
+
+  const wrapper =
+    document.createElement("div");
+
+  wrapper.className =
+    `message ${role}`;
+
+  const bubble =
+    document.createElement("div");
+
+  bubble.className =
+    "bubble";
+
+  bubble.textContent =
+    content;
+
+  wrapper.appendChild(bubble);
+
+  messagesContainer.appendChild(
+    wrapper
+  );
+
+  messagesContainer.scrollTop =
+    messagesContainer.scrollHeight;
+}
+
+
+// ======================================================
+// SEND MESSAGE
+// ======================================================
+
+async function sendMessage() {
+
+  const text =
+    messageInput.value.trim();
+
+  if (!text) {
+    return;
+  }
+
+  if (!auth.currentUser) {
+
+    alert(
+      "يجب تسجيل الدخول أولًا."
+    );
+
+    return;
+  }
+
+  messageInput.value = "";
+
+  addMessageToUI(
+    "user",
+    text
+  );
+
+  currentMessages.push({
+    role: "user",
+    content: text
+  });
+
+  sendButton.disabled = true;
+
+  const loadingElement =
+    document.createElement("div");
+
+  loadingElement.className =
+    "message assistant";
+
+  loadingElement.id =
+    "aiLoading";
+
+  loadingElement.innerHTML = `
+    <div class="bubble">
+      جاري التفكير...
+    </div>
+  `;
+
+  messagesContainer.appendChild(
+    loadingElement
+  );
+
+  messagesContainer.scrollTop =
+    messagesContainer.scrollHeight;
+
+  try {
+
+    // Get fresh Firebase ID token
+    const idToken =
+      await auth.currentUser.getIdToken(
+        true
       );
 
+    const response =
+      await fetch("/api/chat", {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization":
+            `Bearer ${idToken}`
+        },
+
+        body: JSON.stringify({
+          messages: currentMessages
+        })
+      });
+
+    const data =
+      await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(
+        data.error ||
+        "تعذر الحصول على رد من الذكاء الاصطناعي."
+      );
     }
 
-
-    const answer =
-      data.reply ||
-      data.message ||
-      data.response ||
-      data.text ||
-      "لم تصل إجابة من الخادم.";
-
+    const loading =
+      document.getElementById(
+        "aiLoading"
+      );
 
     if (loading) {
-      loading.textContent = answer;
+      loading.remove();
     }
 
+    const answer =
+      data.answer ||
+      "لم يصل رد.";
 
-    conversation.push({
+    addMessageToUI(
+      "assistant",
+      answer
+    );
+
+    currentMessages.push({
       role: "assistant",
       content: answer
     });
 
+    await saveConversation();
 
   } catch (error) {
 
     console.error(
-      "CHAT ERROR:",
+      "Chat error:",
       error
     );
 
+    const loading =
+      document.getElementById(
+        "aiLoading"
+      );
 
     if (loading) {
-
-      loading.textContent =
-        `حدث خطأ: ${error.message}`;
-
+      loading.remove();
     }
+
+    addMessageToUI(
+      "assistant",
+      `حدث خطأ: ${error.message}`
+    );
 
   } finally {
 
-    if (sendButton) {
-      sendButton.disabled = false;
-      sendButton.textContent = "إرسال";
+    sendButton.disabled = false;
+
+    messageInput.focus();
+  }
+}
+
+
+// ======================================================
+// EVENTS
+// ======================================================
+
+sendButton.addEventListener(
+  "click",
+  sendMessage
+);
+
+newChatButton.addEventListener(
+  "click",
+  createNewChat
+);
+
+logoutButton.addEventListener(
+  "click",
+  async () => {
+
+    try {
+
+      await signOut(auth);
+
+      currentPhone = "";
+      currentConversationId = null;
+      currentMessages = [];
+
+      phoneInput.value = "";
+      otpInput.value = "";
+
+      otpStep.classList.add("hidden");
+      phoneStep.classList.remove("hidden");
+
+      setLoginStatus("");
+
+      showLogin();
+
+    } catch (error) {
+
+      console.error(
+        "Logout error:",
+        error
+      );
     }
-
   }
-}
+);
 
 
-/* =========================================================
-   ADD MESSAGE
-========================================================= */
+// ======================================================
+// ENTER TO SEND
+// ======================================================
 
-function addMessage(
-  text,
-  type
-) {
+messageInput.addEventListener(
+  "keydown",
+  (event) => {
 
-  const container =
-    $("messages");
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey
+    ) {
 
-  if (!container) {
-    return null;
+      event.preventDefault();
+
+      sendMessage();
+    }
   }
+);
 
 
-  const element =
-    document.createElement("div");
+// ======================================================
+// INITIAL STATE
+// ======================================================
 
-  element.className =
-    `message ${type}`;
-
-  element.textContent =
-    text;
-
-
-  container.appendChild(
-    element
-  );
-
-
-  container.scrollTop =
-    container.scrollHeight;
-
-
-  return element;
-}
-
-
-/* =========================================================
-   LOGOUT
-========================================================= */
-
-function logout() {
-
-  localStorage.removeItem(
-    "chat_ai_logged_in"
-  );
-
-  localStorage.removeItem(
-    "chat_ai_phone"
-  );
-
-
-  currentPhone = "";
-
-  conversation = [];
-
-
-  const messages =
-    $("messages");
-
-  if (messages) {
-    messages.innerHTML = "";
-  }
-
-
-  const otpInput =
-    $("otpInput");
-
-  if (otpInput) {
-    otpInput.value = "";
-  }
-
-
-  const phoneInput =
-    $("phoneInput");
-
-  if (phoneInput) {
-    phoneInput.value = "";
-  }
-
-
-  const phoneStep =
-    $("phoneStep");
-
-  const otpStep =
-    $("otpStep");
-
-  if (phoneStep) {
-    phoneStep.classList.remove("hidden");
-  }
-
-  if (otpStep) {
-    otpStep.classList.add("hidden");
-  }
-
-
-  setStatus("");
-
-  showAuth();
-}
+showLogin();
