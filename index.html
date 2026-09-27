@@ -1,352 +1,432 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050505" />
 
-    <title>Chat AI Pro</title>
+  <title>Chat AI Pro</title>
 
-    <link rel="stylesheet" href="style.css">
-    <link rel="icon" type="image/png" href="icon.png">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Tahoma, sans-serif;
+      background:
+        radial-gradient(circle at top right, #16213d 0%, transparent 40%),
+        radial-gradient(circle at bottom left, #111827 0%, transparent 40%),
+        #050505;
+      color: white;
+      min-height: 100vh;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* =========================
+       AUTH
+    ========================= */
+
+    #authScreen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 430px;
+      padding: 30px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 28px;
+      background: rgba(20,20,25,.72);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      box-shadow: 0 20px 70px rgba(0,0,0,.45);
+    }
+
+    .logo {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 18px;
+      border-radius: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: 800;
+      background: linear-gradient(135deg,#ffffff,#7c7c7c);
+      color: #050505;
+      box-shadow: 0 10px 35px rgba(255,255,255,.12);
+    }
+
+    .auth-card h1 {
+      text-align: center;
+      margin: 0;
+      font-size: 28px;
+    }
+
+    .auth-card p {
+      text-align: center;
+      color: #a9a9b3;
+      margin: 10px 0 25px;
+      line-height: 1.6;
+    }
+
+    .phone-row {
+      display: flex;
+      gap: 8px;
+      direction: ltr;
+      margin-bottom: 12px;
+    }
+
+    #countrySelect {
+      width: 145px;
+      min-width: 145px;
+      padding: 14px 10px;
+      border-radius: 15px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.07);
+      color: white;
+      outline: none;
+      cursor: pointer;
+    }
+
+    #countrySelect option {
+      background: #17171b;
+      color: white;
+    }
+
+    #phoneInput {
+      flex: 1;
+      min-width: 0;
+      padding: 14px;
+      border-radius: 15px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.07);
+      color: white;
+      outline: none;
+      direction: ltr;
+      text-align: left;
+    }
+
+    #otpInput {
+      width: 100%;
+      padding: 16px;
+      border-radius: 15px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.07);
+      color: white;
+      outline: none;
+      text-align: center;
+      letter-spacing: 7px;
+      font-size: 22px;
+      margin-bottom: 12px;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: rgba(255,255,255,.4);
+    }
+
+    .primary-btn {
+      width: 100%;
+      border: 0;
+      border-radius: 15px;
+      padding: 15px;
+      cursor: pointer;
+      font-weight: 700;
+      color: #050505;
+      background: white;
+      transition: .2s;
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-1px);
+      opacity: .92;
+    }
+
+    .secondary-btn {
+      width: 100%;
+      margin-top: 10px;
+      border: 1px solid rgba(255,255,255,.13);
+      border-radius: 15px;
+      padding: 13px;
+      cursor: pointer;
+      color: white;
+      background: rgba(255,255,255,.06);
+    }
+
+    .status {
+      min-height: 24px;
+      margin-top: 14px;
+      text-align: center;
+      color: #cfcfd8;
+      font-size: 14px;
+    }
+
+    /* =========================
+       CHAT
+    ========================= */
+
+    #chatScreen {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-header {
+      height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(5,5,5,.72);
+      backdrop-filter: blur(20px);
+    }
+
+    .chat-title {
+      font-weight: 800;
+      font-size: 19px;
+    }
+
+    .logout-btn {
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color: white;
+      border-radius: 12px;
+      padding: 9px 13px;
+      cursor: pointer;
+    }
+
+    #messages {
+      flex: 1;
+      width: 100%;
+      max-width: 950px;
+      margin: auto;
+      padding: 25px 18px 130px;
+    }
+
+    .message {
+      max-width: 80%;
+      padding: 13px 16px;
+      border-radius: 18px;
+      margin-bottom: 12px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .message.user {
+      margin-right: auto;
+      background: #ffffff;
+      color: #080808;
+      border-bottom-right-radius: 5px;
+    }
+
+    .message.ai {
+      margin-left: auto;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.08);
+      border-bottom-left-radius: 5px;
+    }
+
+    .chat-input-area {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 15px;
+      background: rgba(5,5,5,.8);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+
+    .chat-form {
+      max-width: 950px;
+      margin: auto;
+      display: flex;
+      gap: 10px;
+    }
+
+    #messageInput {
+      flex: 1;
+      padding: 15px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.12);
+      outline: none;
+      background: rgba(255,255,255,.07);
+      color: white;
+    }
+
+    #sendMessageBtn {
+      width: 100px;
+      border: 0;
+      border-radius: 16px;
+      background: white;
+      color: black;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    @media (max-width: 550px) {
+      .auth-card {
+        padding: 22px;
+      }
+
+      .phone-row {
+        flex-direction: column;
+      }
+
+      #countrySelect {
+        width: 100%;
+      }
+
+      .message {
+        max-width: 92%;
+      }
+
+      #sendMessageBtn {
+        width: 75px;
+      }
+    }
+  </style>
 </head>
 
 <body>
 
-    <!-- =========================
-         LOGIN SCREEN
-    ========================== -->
+  <!-- =========================
+       LOGIN
+  ========================== -->
 
-    <div id="authScreen" class="auth-screen">
+  <section id="authScreen">
 
-        <div class="auth-card">
+    <div class="auth-card">
 
-            <div class="auth-logo">
-                <img src="icon.png" alt="Chat AI Pro">
-            </div>
+      <div class="logo">AI</div>
 
-            <h1>Chat AI Pro</h1>
+      <h1>Chat AI Pro</h1>
 
-            <p class="auth-subtitle">
-                سجّل الدخول للمتابعة
-            </p>
+      <p id="authDescription">
+        أدخل رقم هاتفك للمتابعة
+      </p>
 
-            <!-- PHONE STEP -->
+      <!-- Phone -->
+      <div id="phoneStep">
 
-            <div id="phoneStep" class="auth-step">
+        <div class="phone-row">
 
-                <label for="phoneInput">
-                    رقم الجوال
-                </label>
+          <select id="countrySelect" aria-label="الدولة">
+            <option value="SA">🇸🇦 +966</option>
+          </select>
 
-                <div class="phone-input-wrap">
-                    <span class="country-code">+966</span>
-
-                    <input
-                        id="phoneInput"
-                        type="tel"
-                        inputmode="numeric"
-                        maxlength="9"
-                        placeholder="5XXXXXXXX"
-                        autocomplete="tel"
-                    >
-                </div>
-
-                <button
-                    id="sendOtpBtn"
-                    class="auth-button"
-                    type="button"
-                >
-                    إرسال رمز التحقق
-                </button>
-
-                <div id="phoneError" class="auth-error"></div>
-
-                <p class="auth-note">
-                    سيتم إرسال رمز تحقق إلى رقم جوالك.
-                </p>
-
-            </div>
-
-
-            <!-- OTP STEP -->
-
-            <div id="otpStep" class="auth-step hidden">
-
-                <div class="back-row">
-                    <button
-                        id="backToPhoneBtn"
-                        class="back-button"
-                        type="button"
-                    >
-                        ← تغيير الرقم
-                    </button>
-                </div>
-
-                <p class="otp-info">
-                    تم إرسال رمز التحقق إلى:
-                </p>
-
-                <strong id="sentPhone" class="sent-phone">
-                    +966
-                </strong>
-
-                <label for="otpInput">
-                    رمز التحقق
-                </label>
-
-                <input
-                    id="otpInput"
-                    class="otp-input"
-                    type="text"
-                    inputmode="numeric"
-                    maxlength="6"
-                    placeholder="••••••"
-                    autocomplete="one-time-code"
-                >
-
-                <button
-                    id="verifyOtpBtn"
-                    class="auth-button"
-                    type="button"
-                >
-                    تحقق ودخول
-                </button>
-
-                <div id="otpError" class="auth-error"></div>
-
-                <button
-                    id="resendOtpBtn"
-                    class="resend-button"
-                    type="button"
-                >
-                    إعادة إرسال الرمز
-                </button>
-
-            </div>
-
-            <div id="authLoading" class="auth-loading hidden">
-                <div class="spinner"></div>
-                <span>جارٍ التحقق...</span>
-            </div>
+          <input
+            id="phoneInput"
+            type="tel"
+            inputmode="tel"
+            autocomplete="tel"
+            placeholder="5XXXXXXXX"
+          />
 
         </div>
 
-    </div>
-
-
-    <!-- =========================
-         MAIN APP
-    ========================== -->
-
-    <div id="app" class="app hidden">
-
-        <!-- SIDEBAR -->
-
-        <aside class="sidebar">
-
-            <div class="sidebar-top">
-
-                <div class="sidebar-brand">
-
-                    <img
-                        src="icon.png"
-                        alt="Chat AI Pro"
-                    >
-
-                    <div>
-                        <strong>Chat AI Pro</strong>
-                        <span>مساعدك الذكي</span>
-                    </div>
-
-                </div>
-
-                <button
-                    id="newChatBtn"
-                    class="new-chat-btn"
-                    type="button"
-                >
-                    <span>＋</span>
-                    محادثة جديدة
-                </button>
-
-            </div>
-
-
-            <div class="history-title">
-                سجل المحادثات
-            </div>
-
-            <div
-                id="conversationList"
-                class="conversation-list"
-            ></div>
-
-
-            <div class="sidebar-bottom">
-
-                <div class="user-box">
-
-                    <div class="user-avatar">
-                        <span>👤</span>
-                    </div>
-
-                    <div class="user-info">
-                        <strong id="userPhone">
-                            مستخدم
-                        </strong>
-
-                        <span>
-                            حساب موثّق
-                        </span>
-                    </div>
-
-                </div>
-
-                <button
-                    id="logoutBtn"
-                    class="logout-btn"
-                    type="button"
-                >
-                    تسجيل الخروج
-                </button>
-
-            </div>
-
-        </aside>
-
-
-        <!-- MOBILE OVERLAY -->
-
-        <div
-            id="sidebarOverlay"
-            class="sidebar-overlay"
-        ></div>
-
-
-        <!-- MAIN -->
-
-        <main class="main">
-
-            <!-- TOP BAR -->
-
-            <header class="topbar">
-
-                <div class="brand">
-
-                    <button
-                        id="menuBtn"
-                        class="menu-btn"
-                        type="button"
-                        aria-label="فتح القائمة"
-                    >
-                        ☰
-                    </button>
-
-                    <div class="logo">
-
-                        <img
-                            src="icon.png"
-                            alt="Chat AI Pro"
-                        >
-
-                    </div>
-
-                    <div class="brand-text">
-
-                        <h1>
-                            Chat AI Pro
-                        </h1>
-
-                        <span>
-                            مساعدك الذكي
-                        </span>
-
-                    </div>
-
-                </div>
-
-
-                <button
-                    id="clearBtn"
-                    class="ghost"
-                    type="button"
-                >
-                    محادثة جديدة
-                </button>
-
-            </header>
-
-
-            <!-- CHAT -->
-
-            <section
-                id="chat"
-                class="chat"
-            >
-
-                <section
-                    id="welcome"
-                    class="welcome"
-                >
-
-                    <div class="welcome-icon">
-
-                        <img
-                            src="icon.png"
-                            alt="Chat AI Pro"
-                        >
-
-                    </div>
-
-                    <h2>
-                        مرحبًا بك في Chat AI Pro
-                    </h2>
-
-                    <p>
-                        اكتب سؤالك وسأحاول مساعدتك.
-                    </p>
-
-                </section>
-
-            </section>
-
-
-            <!-- COMPOSER -->
-
-            <div class="composer-wrap">
-
-                <div class="composer">
-
-                    <textarea
-                        id="message"
-                        rows="1"
-                        placeholder="اكتب رسالتك هنا..."
-                        autocomplete="off"
-                    ></textarea>
-
-                    <button
-                        id="sendBtn"
-                        class="send"
-                        type="button"
-                        aria-label="إرسال"
-                    >
-                        ➤
-                    </button>
-
-                </div>
-
-                <small>
-                    Chat AI Pro — لا تضع مفاتيح API داخل الموقع.
-                </small>
-
-            </div>
-
-        </main>
+        <button id="sendOtpBtn" class="primary-btn">
+          إرسال رمز التحقق
+        </button>
+
+      </div>
+
+      <!-- OTP -->
+      <div id="otpStep" class="hidden">
+
+        <input
+          id="otpInput"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          maxlength="8"
+          placeholder="••••••"
+        />
+
+        <button id="verifyOtpBtn" class="primary-btn">
+          تأكيد الرمز
+        </button>
+
+        <button id="resendOtpBtn" class="secondary-btn">
+          إرسال الرمز مرة أخرى
+        </button>
+
+      </div>
+
+      <div id="authStatus" class="status"></div>
 
     </div>
 
+  </section>
 
-    <script src="script.js"></script>
+
+  <!-- =========================
+       CHAT
+  ========================== -->
+
+  <section id="chatScreen" class="hidden">
+
+    <header class="chat-header">
+
+      <div class="chat-title">
+        Chat AI Pro
+      </div>
+
+      <button id="logoutBtn" class="logout-btn">
+        تسجيل الخروج
+      </button>
+
+    </header>
+
+    <main id="messages"></main>
+
+    <div class="chat-input-area">
+
+      <form id="chatForm" class="chat-form">
+
+        <input
+          id="messageInput"
+          type="text"
+          autocomplete="off"
+          placeholder="اكتب رسالتك..."
+        />
+
+        <button id="sendMessageBtn" type="submit">
+          إرسال
+        </button>
+
+      </form>
+
+    </div>
+
+  </section>
+
+
+  <!--
+    libphonenumber-js
+    يدعم بيانات أرقام دول ومناطق العالم.
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/libphonenumber-js@1.13.14/bundle/libphonenumber-js.min.js"></script>
+
+  <script src="script.js"></script>
 
 </body>
 </html>
