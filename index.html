@@ -1,956 +1,513 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Chat AI Pro</title>
-
-    <link
-        rel="icon"
-        type="image/png"
-        href="/logo.png"
-    >
-
-    <link
-        rel="preconnect"
-        href="https://fonts.googleapis.com"
-    >
-
-    <link
-        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap"
-        rel="stylesheet"
-    >
-
-    <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        :root {
-            --blue: #168cff;
-            --cyan: #00e5ff;
-            --dark: #030711;
-            --panel: rgba(8, 15, 29, 0.72);
-            --border: rgba(0, 174, 255, 0.25);
-            --text: #f4f8ff;
-            --muted: #8ea3bd;
-        }
-
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            font-family: "Cairo", sans-serif;
-            background: #02050b;
-            color: var(--text);
-            overflow: hidden;
-        }
-
-        body {
-            position: relative;
-        }
-
-        body::before {
-            content: "";
-            position: fixed;
-            inset: -30%;
-            background:
-                radial-gradient(
-                    circle at 20% 20%,
-                    rgba(0, 174, 255, 0.16),
-                    transparent 30%
-                ),
-                radial-gradient(
-                    circle at 80% 20%,
-                    rgba(0, 102, 255, 0.15),
-                    transparent 30%
-                ),
-                radial-gradient(
-                    circle at 50% 90%,
-                    rgba(0, 229, 255, 0.11),
-                    transparent 30%
-                );
-            animation: backgroundMove 12s ease-in-out infinite alternate;
-            pointer-events: none;
-        }
-
-        @keyframes backgroundMove {
-            from {
-                transform: translate3d(-2%, -2%, 0) scale(1);
-            }
-
-            to {
-                transform: translate3d(2%, 2%, 0) scale(1.08);
-            }
-        }
-
-        button,
-        input {
-            font-family: inherit;
-        }
-
-        button {
-            cursor: pointer;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        /* =====================================================
-           AUTH
-           ===================================================== */
-
-        #authScreen {
-            position: fixed;
-            inset: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            z-index: 100;
-        }
-
-        .auth-card {
-            width: min(430px, 100%);
-            padding: 32px;
-            border-radius: 30px;
-            background: rgba(5, 12, 25, 0.82);
-            border: 1px solid rgba(0, 190, 255, 0.28);
-            backdrop-filter: blur(25px);
-            box-shadow:
-                0 0 70px rgba(0, 128, 255, 0.15),
-                inset 0 0 35px rgba(0, 150, 255, 0.04);
-            text-align: center;
-        }
-
-        .auth-logo {
-            width: 150px;
-            height: 150px;
-            object-fit: contain;
-            border-radius: 28px;
-            margin-bottom: 18px;
-            filter:
-                drop-shadow(0 0 12px rgba(0, 210, 255, 0.55))
-                drop-shadow(0 0 35px rgba(0, 100, 255, 0.25));
-            animation: logoGlow 3s ease-in-out infinite;
-        }
-
-        @keyframes logoGlow {
-            0%,
-            100% {
-                filter:
-                    drop-shadow(0 0 10px rgba(0, 210, 255, 0.45))
-                    drop-shadow(0 0 25px rgba(0, 100, 255, 0.2));
-            }
-
-            50% {
-                filter:
-                    drop-shadow(0 0 22px rgba(0, 229, 255, 0.8))
-                    drop-shadow(0 0 50px rgba(0, 110, 255, 0.4));
-            }
-        }
-
-        .auth-title {
-            font-size: 29px;
-            font-weight: 800;
-            margin: 0 0 8px;
-        }
-
-        .auth-subtitle {
-            color: var(--muted);
-            font-size: 14px;
-            margin-bottom: 25px;
-        }
-
-        .phone-row {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        #countrySelect {
-            width: 125px;
-            flex-shrink: 0;
-            border: 1px solid var(--border);
-            background: rgba(10, 22, 40, 0.9);
-            color: white;
-            border-radius: 14px;
-            padding: 13px 8px;
-            outline: none;
-        }
-
-        #phoneInput,
-        #otpInput {
-            width: 100%;
-            border: 1px solid var(--border);
-            background: rgba(10, 22, 40, 0.9);
-            color: white;
-            border-radius: 14px;
-            padding: 14px;
-            outline: none;
-            font-size: 15px;
-        }
-
-        #phoneInput:focus,
-        #otpInput:focus,
-        #countrySelect:focus {
-            border-color: var(--cyan);
-            box-shadow: 0 0 20px rgba(0, 210, 255, 0.12);
-        }
-
-        .main-button {
-            width: 100%;
-            border: 0;
-            border-radius: 15px;
-            padding: 14px;
-            color: white;
-            font-size: 16px;
-            font-weight: 800;
-            background: linear-gradient(
-                110deg,
-                #087cff,
-                #00cfff,
-                #087cff
-            );
-            background-size: 200% 100%;
-            animation: buttonFlow 4s linear infinite;
-            box-shadow: 0 0 25px rgba(0, 150, 255, 0.22);
-        }
-
-        @keyframes buttonFlow {
-            from {
-                background-position: 0% 50%;
-            }
-
-            to {
-                background-position: 200% 50%;
-            }
-        }
-
-        .main-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .auth-message {
-            min-height: 25px;
-            margin-top: 14px;
-            font-size: 13px;
-            color: #8edfff;
-        }
-
-        /* =====================================================
-           APP
-           ===================================================== */
-
-        #appScreen {
-            position: fixed;
-            inset: 0;
-            display: flex;
-            z-index: 10;
-        }
-
-        .sidebar {
-            width: 310px;
-            height: 100%;
-            padding: 16px;
-            background: rgba(3, 9, 19, 0.76);
-            border-left: 1px solid var(--border);
-            backdrop-filter: blur(24px);
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 6px;
-        }
-
-        .brand img {
-            width: 55px;
-            height: 55px;
-            object-fit: contain;
-            border-radius: 14px;
-            filter: drop-shadow(
-                0 0 13px rgba(0, 200, 255, 0.55)
-            );
-        }
-
-        .brand-text {
-            min-width: 0;
-        }
-
-        .brand-title {
-            font-size: 18px;
-            font-weight: 800;
-        }
-
-        .brand-user {
-            font-size: 11px;
-            color: var(--muted);
-            direction: ltr;
-            text-align: right;
-        }
-
-        .new-chat {
-            border: 1px solid rgba(0, 200, 255, 0.3);
-            background: rgba(0, 120, 255, 0.12);
-            color: white;
-            padding: 13px;
-            border-radius: 14px;
-            font-weight: 700;
-            transition: 0.2s;
-        }
-
-        .new-chat:hover {
-            background: rgba(0, 150, 255, 0.2);
-            transform: translateY(-1px);
-        }
-
-        .history-title {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: var(--muted);
-            font-size: 13px;
-            padding: 0 5px;
-        }
-
-        .history-list {
-            flex: 1;
-            overflow-y: auto;
-            padding-right: 2px;
-        }
-
-        .history-list::-webkit-scrollbar,
-        .messages::-webkit-scrollbar {
-            width: 5px;
-        }
-
-        .history-list::-webkit-scrollbar-thumb,
-        .messages::-webkit-scrollbar-thumb {
-            background: rgba(0, 190, 255, 0.22);
-            border-radius: 20px;
-        }
-
-        .history-item {
-            position: relative;
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            width: 100%;
-            margin-bottom: 7px;
-            padding: 10px;
-            border-radius: 13px;
-            border: 1px solid transparent;
-            background: transparent;
-            color: #d9e7f7;
-            text-align: right;
-            transition: 0.2s;
-        }
-
-        .history-item:hover {
-            background: rgba(0, 150, 255, 0.08);
-            border-color: rgba(0, 180, 255, 0.12);
-        }
-
-        .history-item.active {
-            background: rgba(0, 150, 255, 0.13);
-            border-color: rgba(0, 200, 255, 0.25);
-        }
-
-        .history-name {
-            flex: 1;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            font-size: 13px;
-        }
-
-        .delete-chat {
-            width: 27px;
-            height: 27px;
-            border: 0;
-            border-radius: 8px;
-            background: rgba(255, 60, 80, 0.08);
-            color: #ff7e91;
-        }
-
-        .account-box {
-            border-top: 1px solid rgba(255,255,255,0.08);
-            padding-top: 12px;
-        }
-
-        .logout-button {
-            width: 100%;
-            padding: 11px;
-            border: 1px solid rgba(255, 100, 120, 0.18);
-            border-radius: 12px;
-            background: rgba(255, 50, 80, 0.06);
-            color: #ff9baa;
-        }
-
-        /* =====================================================
-           CHAT
-           ===================================================== */
-
-        .chat-area {
-            flex: 1;
-            min-width: 0;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .chat-header {
-            height: 78px;
-            padding: 12px 22px;
-            border-bottom: 1px solid rgba(0, 190, 255, 0.12);
-            background: rgba(3, 9, 18, 0.42);
-            backdrop-filter: blur(20px);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .mobile-history {
-            display: none;
-        }
-
-        .header-logo {
-            width: 44px;
-            height: 44px;
-            object-fit: contain;
-            border-radius: 12px;
-        }
-
-        .header-title {
-            font-size: 17px;
-            font-weight: 800;
-        }
-
-        .header-status {
-            font-size: 11px;
-            color: #6ce6ff;
-        }
-
-        .messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 25px 5%;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .welcome {
-            margin: auto;
-            max-width: 650px;
-            text-align: center;
-        }
-
-        .welcome img {
-            width: 110px;
-            height: 110px;
-            object-fit: contain;
-            border-radius: 25px;
-            filter: drop-shadow(
-                0 0 25px rgba(0, 190, 255, 0.4)
-            );
-        }
-
-        .welcome h1 {
-            margin: 15px 0 5px;
-            font-size: 30px;
-        }
-
-        .welcome p {
-            color: var(--muted);
-            font-size: 14px;
-        }
-
-        .message {
-            display: flex;
-            gap: 10px;
-            max-width: min(850px, 90%);
-        }
-
-        .message.user {
-            align-self: flex-start;
-            flex-direction: row-reverse;
-        }
-
-        .message.assistant {
-            align-self: flex-end;
-        }
-
-        .avatar {
-            width: 35px;
-            height: 35px;
-            border-radius: 11px;
-            object-fit: contain;
-            flex-shrink: 0;
-        }
-
-        .bubble {
-            padding: 12px 15px;
-            border-radius: 17px;
-            line-height: 1.8;
-            white-space: pre-wrap;
-            word-break: break-word;
-            font-size: 14px;
-        }
-
-        .user .bubble {
-            background: linear-gradient(
-                135deg,
-                rgba(0, 129, 255, 0.8),
-                rgba(0, 188, 255, 0.6)
-            );
-            border: 1px solid rgba(120, 220, 255, 0.2);
-            border-top-left-radius: 5px;
-        }
-
-        .assistant .bubble {
-            background: rgba(10, 22, 39, 0.82);
-            border: 1px solid rgba(0, 190, 255, 0.13);
-            border-top-right-radius: 5px;
-        }
-
-        .composer {
-            padding: 14px 5% 20px;
-        }
-
-        .composer-inner {
-            max-width: 950px;
-            margin: auto;
-            display: flex;
-            gap: 9px;
-            padding: 8px;
-            border-radius: 19px;
-            background: rgba(5, 14, 27, 0.83);
-            border: 1px solid rgba(0, 190, 255, 0.18);
-            backdrop-filter: blur(20px);
-            box-shadow:
-                0 0 35px rgba(0, 100, 255, 0.08);
-        }
-
-        #messageInput {
-            flex: 1;
-            resize: none;
-            min-height: 45px;
-            max-height: 150px;
-            border: 0;
-            outline: none;
-            background: transparent;
-            color: white;
-            padding: 10px 12px;
-            font-size: 14px;
-        }
-
-        #sendMessageBtn {
-            width: 47px;
-            height: 47px;
-            border: 0;
-            border-radius: 14px;
-            background: linear-gradient(
-                135deg,
-                #008cff,
-                #00d5ff
-            );
-            color: white;
-            font-size: 20px;
-            box-shadow:
-                0 0 20px rgba(0, 180, 255, 0.22);
-        }
-
-        #sendMessageBtn:disabled {
-            opacity: 0.4;
-        }
-
-        .composer-note {
-            text-align: center;
-            color: #60758d;
-            font-size: 10px;
-            margin-top: 6px;
-        }
-
-        /* =====================================================
-           RESPONSIVE
-           ===================================================== */
-
-        @media (max-width: 800px) {
-            .sidebar {
-                position: fixed;
-                right: 0;
-                top: 0;
-                bottom: 0;
-                z-index: 80;
-                transform: translateX(105%);
-                transition: 0.25s;
-                box-shadow: -20px 0 50px rgba(0,0,0,0.3);
-            }
-
-            .sidebar.open {
-                transform: translateX(0);
-            }
-
-            .mobile-history {
-                display: block;
-                width: 40px;
-                height: 40px;
-                border: 1px solid var(--border);
-                border-radius: 11px;
-                background: rgba(0, 140, 255, 0.08);
-                color: white;
-            }
-
-            .chat-header {
-                padding: 10px 13px;
-            }
-
-            .messages {
-                padding: 18px 12px;
-            }
-
-            .composer {
-                padding: 10px 10px 14px;
-            }
-
-            .message {
-                max-width: 94%;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat AI Pro</title>
+
+  <link rel="icon" href="/logo.png">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(0, 200, 255, .18), transparent 30%),
+        radial-gradient(circle at 80% 80%, rgba(80, 50, 255, .18), transparent 30%),
+        linear-gradient(135deg, #02030a, #06152c, #02030a);
+      color: white;
+      overflow: hidden;
+    }
+
+    button,
+    input,
+    textarea {
+      font-family: inherit;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* ================= LOGIN ================= */
+
+    #loginScreen {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 430px;
+      padding: 35px;
+      border-radius: 28px;
+      background: rgba(10, 20, 40, .62);
+      border: 1px solid rgba(100, 210, 255, .25);
+      backdrop-filter: blur(25px);
+      box-shadow:
+        0 0 50px rgba(0, 180, 255, .12),
+        inset 0 0 30px rgba(255,255,255,.03);
+      text-align: center;
+    }
+
+    .logo {
+      width: 115px;
+      height: 115px;
+      object-fit: cover;
+      border-radius: 25px;
+      margin-bottom: 18px;
+      box-shadow: 0 0 35px rgba(0, 200, 255, .25);
+    }
+
+    .login-card h1 {
+      font-size: 30px;
+      margin-bottom: 8px;
+    }
+
+    .login-card p {
+      color: #aebbd0;
+      margin-bottom: 25px;
+    }
+
+    .input {
+      width: 100%;
+      padding: 15px;
+      margin-bottom: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 14px;
+      outline: none;
+      background: rgba(255,255,255,.06);
+      color: white;
+      font-size: 16px;
+    }
+
+    .input:focus {
+      border-color: #38cfff;
+      box-shadow: 0 0 15px rgba(56,207,255,.15);
+    }
+
+    .primary-btn {
+      width: 100%;
+      border: 0;
+      padding: 15px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #08bfff, #4264ff);
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: .2s;
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(20,160,255,.25);
+    }
+
+    .status {
+      margin-top: 15px;
+      min-height: 22px;
+      color: #8ddcff;
+      font-size: 14px;
+    }
+
+    /* ================= APP ================= */
+
+    #appScreen {
+      height: 100vh;
+      display: flex;
+    }
+
+    .sidebar {
+      width: 290px;
+      height: 100vh;
+      background: rgba(3, 10, 23, .72);
+      border-left: 1px solid rgba(255,255,255,.08);
+      backdrop-filter: blur(25px);
+      display: flex;
+      flex-direction: column;
+      padding: 18px;
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .sidebar-header img {
+      width: 45px;
+      height: 45px;
+      border-radius: 13px;
+    }
+
+    .sidebar-header strong {
+      font-size: 18px;
+    }
+
+    .new-chat {
+      border: 1px solid rgba(70,210,255,.25);
+      background: rgba(20,150,255,.10);
+      color: white;
+      padding: 13px;
+      border-radius: 13px;
+      cursor: pointer;
+      margin-bottom: 15px;
+    }
+
+    .history {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .history-item {
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 7px;
+      cursor: pointer;
+      color: #dce8f8;
+      background: transparent;
+      display: flex;
+      justify-content: space-between;
+      gap: 5px;
+    }
+
+    .history-item:hover,
+    .history-item.active {
+      background: rgba(255,255,255,.07);
+    }
+
+    .history-title {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
+
+    .delete-chat {
+      border: 0;
+      background: transparent;
+      color: #7890aa;
+      cursor: pointer;
+    }
+
+    .account-box {
+      border-top: 1px solid rgba(255,255,255,.08);
+      padding-top: 15px;
+      margin-top: 15px;
+    }
+
+    .account-phone {
+      font-size: 13px;
+      color: #9eb1c9;
+      margin-bottom: 10px;
+      direction: ltr;
+      text-align: center;
+    }
+
+    .logout {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,.1);
+      background: rgba(255,255,255,.04);
+      color: white;
+      padding: 11px;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    /* ================= CHAT ================= */
+
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .topbar {
+      height: 70px;
+      display: flex;
+      align-items: center;
+      padding: 0 25px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(0,0,0,.12);
+      backdrop-filter: blur(15px);
+    }
+
+    .topbar-title {
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 30px;
+    }
+
+    .welcome {
+      text-align: center;
+      margin-top: 13vh;
+      color: #aebbd0;
+    }
+
+    .welcome h2 {
+      color: white;
+      font-size: 30px;
+      margin-bottom: 10px;
+    }
+
+    .message {
+      max-width: 850px;
+      margin: 0 auto 18px;
+      display: flex;
+    }
+
+    .message.user {
+      justify-content: flex-start;
+    }
+
+    .message.assistant {
+      justify-content: flex-end;
+    }
+
+    .bubble {
+      max-width: 80%;
+      padding: 15px 18px;
+      border-radius: 18px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+    }
+
+    .user .bubble {
+      background: linear-gradient(135deg, #087fff, #3157ff);
+    }
+
+    .assistant .bubble {
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .composer {
+      padding: 18px 25px 25px;
+    }
+
+    .composer-inner {
+      max-width: 900px;
+      margin: auto;
+      display: flex;
+      gap: 10px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 18px;
+      padding: 8px;
+      backdrop-filter: blur(20px);
+    }
+
+    #messageInput {
+      flex: 1;
+      resize: none;
+      min-height: 48px;
+      max-height: 150px;
+      border: 0;
+      outline: none;
+      background: transparent;
+      color: white;
+      padding: 13px;
+      font-size: 16px;
+    }
+
+    #sendButton {
+      width: 52px;
+      height: 52px;
+      border: 0;
+      border-radius: 15px;
+      background: linear-gradient(135deg, #00c9ff, #4357ff);
+      color: white;
+      cursor: pointer;
+      font-size: 20px;
+    }
+
+    @media (max-width: 750px) {
+      .sidebar {
+        width: 220px;
+      }
+
+      .messages {
+        padding: 18px 12px;
+      }
+
+      .bubble {
+        max-width: 90%;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .sidebar {
+        display: none;
+      }
+
+      .topbar {
+        padding: 0 15px;
+      }
+
+      .composer {
+        padding: 10px;
+      }
+    }
+  </style>
 </head>
 
 <body>
 
-    <!-- =====================================================
-         AUTH SCREEN
-         ===================================================== -->
+  <!-- ================= LOGIN ================= -->
 
-    <section id="authScreen">
+  <section id="loginScreen">
 
-        <div class="auth-card">
+    <div class="login-card">
 
-            <img
-                src="/logo.png"
-                class="auth-logo"
-                alt="Chat AI Pro"
-            >
+      <img src="/logo.png" class="logo" alt="Chat AI Pro">
 
-            <h1 class="auth-title">
-                Chat AI Pro
-            </h1>
+      <h1>Chat AI Pro</h1>
+      <p>سجّل الدخول باستخدام رقم هاتفك</p>
 
-            <div class="auth-subtitle">
-                سجّل دخولك برقم هاتفك للوصول إلى حسابك ومحادثاتك
-            </div>
+      <div id="phoneStep">
 
-            <div id="phoneStep">
+        <input
+          id="phoneInput"
+          class="input"
+          type="tel"
+          placeholder="+9665XXXXXXXX"
+          autocomplete="tel"
+        >
 
-                <div class="phone-row">
+        <button
+          id="sendOtpButton"
+          class="primary-btn"
+        >
+          إرسال رمز التحقق
+        </button>
 
-                    <select id="countrySelect"></select>
+      </div>
 
-                    <input
-                        id="phoneInput"
-                        type="tel"
-                        inputmode="tel"
-                        autocomplete="tel"
-                        placeholder="رقم الهاتف"
-                    >
+      <div id="otpStep" class="hidden">
 
-                </div>
+        <input
+          id="otpInput"
+          class="input"
+          type="text"
+          inputmode="numeric"
+          maxlength="8"
+          placeholder="أدخل رمز التحقق"
+        >
 
-                <button
-                    id="sendOtpBtn"
-                    class="main-button"
-                >
-                    إرسال رمز التحقق
-                </button>
+        <button
+          id="verifyOtpButton"
+          class="primary-btn"
+        >
+          تأكيد الرمز
+        </button>
 
-            </div>
+        <button
+          id="backToPhoneButton"
+          class="logout"
+          style="margin-top:10px"
+        >
+          تغيير رقم الهاتف
+        </button>
 
-            <div id="otpStep" class="hidden">
+      </div>
 
-                <input
-                    id="otpInput"
-                    type="text"
-                    inputmode="numeric"
-                    maxlength="8"
-                    placeholder="أدخل رمز التحقق"
-                >
+      <div id="loginStatus" class="status"></div>
 
-                <br><br>
+    </div>
 
-                <button
-                    id="verifyOtpBtn"
-                    class="main-button"
-                >
-                    تأكيد الدخول
-                </button>
+  </section>
 
-                <br><br>
 
-                <button
-                    id="resendOtpBtn"
-                    class="main-button"
-                    style="
-                        background:
-                        rgba(0,120,255,.12);
-                        border:1px solid
-                        rgba(0,200,255,.25);
-                    "
-                >
-                    إعادة إرسال الرمز
-                </button>
+  <!-- ================= APP ================= -->
 
-            </div>
+  <section id="appScreen" class="hidden">
 
-            <div
-                id="authMessage"
-                class="auth-message"
-            ></div>
+    <aside class="sidebar">
+
+      <div class="sidebar-header">
+        <img src="/logo.png" alt="">
+        <strong>Chat AI Pro</strong>
+      </div>
+
+      <button id="newChatButton" class="new-chat">
+        ＋ محادثة جديدة
+      </button>
+
+      <div id="historyList" class="history"></div>
+
+      <div class="account-box">
+
+        <div id="accountPhone" class="account-phone"></div>
+
+        <button id="logoutButton" class="logout">
+          تسجيل الخروج
+        </button>
+
+      </div>
+
+    </aside>
+
+
+    <main class="chat-area">
+
+      <header class="topbar">
+        <div id="chatTitle" class="topbar-title">
+          محادثة جديدة
+        </div>
+      </header>
+
+      <div id="messages" class="messages">
+
+        <div class="welcome">
+          <h2>مرحبًا بك في Chat AI Pro 👋</h2>
+          <p>اكتب أي شيء تريد أن تسأل عنه.</p>
+        </div>
+
+      </div>
+
+
+      <div class="composer">
+
+        <div class="composer-inner">
+
+          <textarea
+            id="messageInput"
+            placeholder="اكتب رسالتك..."
+            rows="1"
+          ></textarea>
+
+          <button id="sendButton">
+            ➤
+          </button>
 
         </div>
 
-    </section>
+      </div>
+
+    </main>
+
+  </section>
 
 
-    <!-- =====================================================
-         APP
-         ===================================================== -->
-
-    <section id="appScreen" class="hidden">
-
-        <!-- SIDEBAR -->
-
-        <aside id="sidebar" class="sidebar">
-
-            <div class="brand">
-
-                <img
-                    src="/logo.png"
-                    alt="Chat AI Pro"
-                >
-
-                <div class="brand-text">
-
-                    <div class="brand-title">
-                        Chat AI Pro
-                    </div>
-
-                    <div
-                        id="accountPhone"
-                        class="brand-user"
-                    ></div>
-
-                </div>
-
-            </div>
-
-            <button
-                id="newChatBtn"
-                class="new-chat"
-            >
-                ＋ محادثة جديدة
-            </button>
-
-            <div class="history-title">
-                <span>سجل المحادثات</span>
-                <span id="historyCount">0</span>
-            </div>
-
-            <div
-                id="historyList"
-                class="history-list"
-            ></div>
-
-            <div class="account-box">
-
-                <button
-                    id="logoutBtn"
-                    class="logout-button"
-                >
-                    تسجيل الخروج
-                </button>
-
-            </div>
-
-        </aside>
-
-
-        <!-- CHAT AREA -->
-
-        <main class="chat-area">
-
-            <header class="chat-header">
-
-                <button
-                    id="mobileHistoryBtn"
-                    class="mobile-history"
-                >
-                    ☰
-                </button>
-
-                <img
-                    src="/logo.png"
-                    class="header-logo"
-                    alt="Chat AI Pro"
-                >
-
-                <div>
-                    <div class="header-title">
-                        Chat AI Pro
-                    </div>
-
-                    <div class="header-status">
-                        ● متصل
-                    </div>
-                </div>
-
-            </header>
-
-
-            <div
-                id="messages"
-                class="messages"
-            ></div>
-
-
-            <div class="composer">
-
-                <div class="composer-inner">
-
-                    <textarea
-                        id="messageInput"
-                        placeholder="اكتب رسالتك..."
-                        rows="1"
-                    ></textarea>
-
-                    <button
-                        id="sendMessageBtn"
-                        title="إرسال"
-                    >
-                        ➤
-                    </button>
-
-                </div>
-
-                <div class="composer-note">
-                    يتم حفظ محادثاتك في حسابك ويمكن الوصول إليها من أجهزتك الأخرى.
-                </div>
-
-            </div>
-
-        </main>
-
-    </section>
-
-
-    <!-- =====================================================
-         FIREBASE
-         ===================================================== -->
-
-    <script type="module">
-
-        import {
-            initializeApp
-        } from
-        "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-
-        import {
-            getAuth,
-            signInWithCustomToken,
-            onAuthStateChanged,
-            signOut
-        } from
-        "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-
-        import {
-            getFirestore,
-            collection,
-            doc,
-            addDoc,
-            setDoc,
-            getDocs,
-            getDoc,
-            deleteDoc,
-            query,
-            orderBy,
-            limit,
-            serverTimestamp
-        } from
-        "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
-
-
-        /*
-         ========================================================
-         ضع بيانات مشروع Firebase الخاص بك هنا
-         ========================================================
-        */
-
-        const firebaseConfig = {
-            apiKey: "PUT_YOUR_FIREBASE_API_KEY_HERE",
-            authDomain: "PUT_YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "PUT_YOUR_PROJECT_ID",
-            storageBucket: "PUT_YOUR_PROJECT_ID.firebasestorage.app",
-            messagingSenderId: "PUT_YOUR_MESSAGING_SENDER_ID",
-            appId: "PUT_YOUR_APP_ID"
-        };
-
-
-        const firebaseApp =
-            initializeApp(firebaseConfig);
-
-        const firebaseAuth =
-            getAuth(firebaseApp);
-
-        const db =
-            getFirestore(firebaseApp);
-
-
-        window.ChatAIProFirebase = {
-            app: firebaseApp,
-            auth: firebaseAuth,
-            db,
-            signInWithCustomToken,
-            onAuthStateChanged,
-            signOut,
-            collection,
-            doc,
-            addDoc,
-            setDoc,
-            getDocs,
-            getDoc,
-            deleteDoc,
-            query,
-            orderBy,
-            limit,
-            serverTimestamp
-        };
-
-    </script>
-
-
-    <!-- Phone number library -->
-
-    <script src="https://cdn.jsdelivr.net/npm/libphonenumber-js@1.13.14/bundle/libphonenumber-js.min.js"></script>
-
-    <script src="/script.js"></script>
+  <!-- Firebase -->
+  <script type="module" src="/script.js"></script>
 
 </body>
 </html>
