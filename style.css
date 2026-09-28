@@ -139,7 +139,7 @@ body::before {
 
     animation:
         chatAIBackgroundMove
-        20s
+        7s
         ease-in-out
         infinite
         alternate;
@@ -178,7 +178,7 @@ body::after {
 
     animation:
         chatAIBackgroundPulse
-        9s
+        4s
         ease-in-out
         infinite
         alternate;
@@ -272,6 +272,98 @@ body::after {
 
     }
 
+}
+
+
+/* =========================================================
+   LOGIN → APP BACKGROUND BURST
+   ========================================================= */
+
+body.login-transition::before {
+    animation:
+        chatAIBackgroundBurst
+        0.9s
+        cubic-bezier(.15, .85, .25, 1)
+        1;
+}
+
+body.login-transition::after {
+    animation:
+        chatAIBackgroundBurstGlow
+        0.9s
+        ease-out
+        1;
+}
+
+
+@keyframes chatAIBackgroundBurst {
+
+    0% {
+        transform:
+            translate3d(0, 0, 0)
+            scale(1);
+
+        filter:
+            blur(45px);
+    }
+
+    30% {
+        transform:
+            translate3d(18%, -15%, 0)
+            scale(1.35);
+
+        filter:
+            blur(30px);
+    }
+
+    55% {
+        transform:
+            translate3d(-16%, 18%, 0)
+            scale(1.25);
+
+        filter:
+            blur(34px);
+    }
+
+    75% {
+        transform:
+            translate3d(10%, -8%, 0)
+            scale(1.12);
+
+        filter:
+            blur(38px);
+    }
+
+    100% {
+        transform:
+            translate3d(0, 0, 0)
+            scale(1);
+
+        filter:
+            blur(45px);
+    }
+}
+
+
+@keyframes chatAIBackgroundBurstGlow {
+
+    0% {
+        opacity: 0.5;
+        transform:
+            scale(1);
+    }
+
+    35% {
+        opacity: 1;
+        transform:
+            scale(1.15);
+    }
+
+    100% {
+        opacity: 0.65;
+        transform:
+            scale(1);
+    }
 }
 
 
