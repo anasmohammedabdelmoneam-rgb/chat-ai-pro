@@ -1241,6 +1241,23 @@ onAuthStateChanged(
         "block";
 
 
+      /* =========================================
+         LOGIN → HOME BACKGROUND BURST
+         ========================================= */
+
+      document.body.classList.add(
+        "login-transition"
+      );
+
+      setTimeout(() => {
+
+        document.body.classList.remove(
+          "login-transition"
+        );
+
+      }, 900);
+
+
       await loadHistory();
 
 
